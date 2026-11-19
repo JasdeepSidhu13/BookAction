@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { isAccessibleBookChapter } from "@/lib/library";
+import { accessFromPerson, isAccessibleBookChapter } from "@/lib/library";
 import {
   addCustomQuestion,
   listBankAnswers,
@@ -17,6 +17,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "person_required" }, { status: 403 });
   }
 
+  const access = accessFromPerson(identity);
   const { searchParams } = new URL(request.url);
   const bookId = searchParams.get("bookId") ?? "";
   const chapterId = searchParams.get("chapterId") ?? "";
@@ -30,7 +31,7 @@ export async function GET(request: Request) {
     chapterId || undefined,
   );
   const custom =
-    chapterId && (await isAccessibleBookChapter(identity.sub, bookId, chapterId))
+    chapterId && (await isAccessibleBookChapter(access, bookId, chapterId))
       ? await listCustomQuestions(identity.sub, bookId, chapterId)
       : [];
 
@@ -47,6 +48,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "person_required" }, { status: 403 });
   }
 
+  const access = accessFromPerson(identity);
   const body = (await request.json()) as {
     action: "answer" | "add_question";
     bookId: string;
@@ -59,13 +61,13 @@ export async function POST(request: Request) {
     prompt?: string;
   };
 
-  if (!(await isAccessibleBookChapter(identity.sub, body.bookId, body.chapterId))) {
+  if (!(await isAccessibleBookChapter(access, body.bookId, body.chapterId))) {
     return NextResponse.json({ error: "unknown_chapter" }, { status: 400 });
   }
 
   if (body.action === "add_question") {
     const row = await addCustomQuestion(
-      identity.sub,
+      access,
       body.bookId,
       body.chapterId,
       body.prompt ?? "",
@@ -77,7 +79,7 @@ export async function POST(request: Request) {
   }
 
   const row = await saveBankAnswer({
-    ownerSub: identity.sub,
+    access,
     bookId: body.bookId,
     chapterId: body.chapterId,
     questionId: body.questionId,

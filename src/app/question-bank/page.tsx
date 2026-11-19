@@ -1,5 +1,7 @@
 import { AppHeader } from "@/components/AppHeader";
+import { EmptyLibrary } from "@/components/EmptyLibrary";
 import { QuestionBankClient } from "@/components/QuestionBankClient";
+import { SignInBanner } from "@/components/SignInBanner";
 import { listLibraryBooks, resolveBook } from "@/lib/library";
 import {
   computeBankInsights,
@@ -18,9 +20,44 @@ export default async function QuestionBankPage({
 }) {
   const viewer = await getViewer();
   const params = await searchParams;
-  const books = await listLibraryBooks(viewer.sub);
+  const books = await listLibraryBooks(viewer.library);
+
+  if (!viewer.verified) {
+    return (
+      <div className="min-h-screen bg-canvas text-ink">
+        <AppHeader active="bank" signedIn={false} />
+        <main className="mx-auto flex max-w-[800px] flex-col gap-6 px-4 py-10 sm:px-8">
+          <h1 className="m-0 font-display text-4xl font-bold tracking-tight">Question Bank</h1>
+          <SignInBanner />
+        </main>
+      </div>
+    );
+  }
+
   const book =
-    (await resolveBook(viewer.sub, params.book ?? "")) ?? books[0];
+    (await resolveBook(viewer.library, params.book ?? "")) ?? books[0];
+
+  if (!book) {
+    return (
+      <div className="min-h-screen bg-canvas text-ink">
+        <AppHeader
+          active="bank"
+          initial={viewer.initial}
+          signedIn
+          viewerName={viewer.name}
+        />
+        <main className="mx-auto flex max-w-[800px] flex-col gap-6 px-4 py-10 sm:px-8">
+          <h1 className="m-0 font-display text-4xl font-bold tracking-tight">Question Bank</h1>
+          <EmptyLibrary
+            verified
+            title="No questions yet"
+            detail="Upload a book to generate a Question Bank for each chapter."
+          />
+        </main>
+      </div>
+    );
+  }
+
   const chapterId = params.chapter ?? book.chapters[1]?.id ?? book.chapters[0].id;
   const chapter =
     book.chapters.find((c) => c.id === chapterId) ?? book.chapters[0];
@@ -29,7 +66,7 @@ export default async function QuestionBankPage({
     listCustomQuestions(viewer.sub, book.id, chapter.id),
     latestAnswersByQuestion(viewer.sub, book.id, chapter.id),
     listBankAnswers(viewer.sub, book.id, chapter.id),
-    computeBankInsights(viewer.sub, book.id),
+    computeBankInsights(viewer.library, book.id),
   ]);
 
   const latestByKey: Record<
@@ -46,7 +83,12 @@ export default async function QuestionBankPage({
 
   return (
     <div className="min-h-screen bg-canvas text-ink">
-      <AppHeader active="bank" initial={viewer.initial} />
+      <AppHeader
+        active="bank"
+        initial={viewer.initial}
+        signedIn
+        viewerName={viewer.name}
+      />
       <QuestionBankClient
         bookId={book.id}
         bookTitle={book.title}

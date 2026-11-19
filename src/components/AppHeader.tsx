@@ -13,10 +13,14 @@ export function AppHeader({
   active,
   initial = "A",
   showAddBook = false,
+  signedIn = true,
+  viewerName,
 }: {
   active: NavKey;
   initial?: string;
   showAddBook?: boolean;
+  signedIn?: boolean;
+  viewerName?: string;
 }) {
   return (
     <header className="border-b border-line bg-white">
@@ -55,7 +59,7 @@ export function AppHeader({
         </nav>
 
         <div className="flex items-center gap-3">
-          {showAddBook ? (
+          {showAddBook && signedIn ? (
             <Link
               href="/upload"
               className="inline-flex h-11 items-center rounded-chip border border-line bg-white px-4 text-sm font-medium text-ink no-underline"
@@ -63,13 +67,20 @@ export function AppHeader({
               + Add book
             </Link>
           ) : null}
-          <div
-            aria-label="Account"
-            role="img"
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-ink text-sm font-semibold text-white"
-          >
-            {initial}
-          </div>
+          {signedIn ? (
+            <div
+              aria-label={viewerName ? `Signed in as ${viewerName}` : "Account"}
+              title={viewerName}
+              role="img"
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-ink text-sm font-semibold text-white"
+            >
+              {initial}
+            </div>
+          ) : (
+            <span className="rounded-chip border border-line bg-wash px-3 py-2 text-sm font-medium text-soft">
+              Signed out
+            </span>
+          )}
         </div>
       </div>
     </header>

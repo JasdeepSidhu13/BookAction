@@ -1,5 +1,10 @@
 import { sql } from "@/lib/db";
-import { isAccessibleBookChapter, resolveBook, resolveChapter } from "@/lib/library";
+import {
+  isAccessibleBookChapter,
+  resolveBook,
+  resolveChapter,
+  type LibraryAccess,
+} from "@/lib/library";
 import { LIMITS, clampText } from "@/lib/limits";
 import type { BankAnswerRow, BankQuestion, CustomQuestionRow } from "@/lib/types";
 
@@ -17,14 +22,15 @@ export async function listCustomQuestions(
 }
 
 export async function addCustomQuestion(
-  ownerSub: string,
+  access: LibraryAccess,
   bookId: string,
   chapterId: string,
   prompt: string,
 ): Promise<CustomQuestionRow> {
-  if (!(await isAccessibleBookChapter(ownerSub, bookId, chapterId))) {
+  if (!(await isAccessibleBookChapter(access, bookId, chapterId))) {
     throw new Error("unknown_chapter");
   }
+  const ownerSub = access.sub;
   const trimmed = clampText(prompt, LIMITS.customPrompt);
   if (!trimmed) throw new Error("empty_prompt");
   const existing = await sql<{ count: string }>(
@@ -81,7 +87,7 @@ export async function latestAnswersByQuestion(
 }
 
 export async function saveBankAnswer(input: {
-  ownerSub: string;
+  access: LibraryAccess;
   bookId: string;
   chapterId: string;
   questionId?: string | null;
@@ -90,9 +96,10 @@ export async function saveBankAnswer(input: {
   valueNumber?: number | null;
   source: "catalog" | "custom";
 }): Promise<BankAnswerRow> {
-  if (!(await isAccessibleBookChapter(input.ownerSub, input.bookId, input.chapterId))) {
+  if (!(await isAccessibleBookChapter(input.access, input.bookId, input.chapterId))) {
     throw new Error("unknown_chapter");
   }
+  const ownerSub = input.access.sub;
   const questionText = clampText(input.questionText, LIMITS.questionText);
   if (!questionText) throw new Error("empty_question");
   const answerText = input.answerText != null ? clampText(input.answerText, LIMITS.answerText) : null;
@@ -100,7 +107,7 @@ export async function saveBankAnswer(input: {
   const existing = await sql<{ count: string }>(
     `select count(*)::text as count from question_bank_answers
      where owner_sub = $1 and book_id = $2 and chapter_id = $3`,
-    [input.ownerSub, input.bookId, input.chapterId],
+    [ownerSub, input.bookId, input.chapterId],
   );
   if (Number(existing[0]?.count ?? 0) >= LIMITS.maxBankAnswersPerChapter) {
     throw new Error("too_many_bank_answers");
@@ -113,7 +120,7 @@ export async function saveBankAnswer(input: {
      values ($1, $2, $3, $4, $5, $6, $7, $8)
      returning *`,
     [
-      input.ownerSub,
+      ownerSub,
       input.bookId,
       input.chapterId,
       input.questionId ?? null,
@@ -127,17 +134,17 @@ export async function saveBankAnswer(input: {
 }
 
 export async function catalogQuestionsForChapter(
-  ownerSub: string,
+  access: LibraryAccess,
   bookId: string,
   chapterId: string,
 ): Promise<BankQuestion[]> {
-  const data = await resolveChapter(ownerSub, bookId, chapterId);
+  const data = await resolveChapter(access, bookId, chapterId);
   return data?.chapter.bankQuestions ?? [];
 }
 
-export async function computeBankInsights(ownerSub: string, bookId: string) {
-  const answers = await listBankAnswers(ownerSub, bookId);
-  const book = await resolveBook(ownerSub, bookId);
+export async function computeBankInsights(access: LibraryAccess, bookId: string) {
+  const answers = await listBankAnswers(access.sub, bookId);
+  const book = await resolveBook(access, bookId);
   const byChapter = new Map<string, BankAnswerRow[]>();
   for (const a of answers) {
     const list = byChapter.get(a.chapter_id) ?? [];

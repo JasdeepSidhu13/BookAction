@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
+import { SignInBanner } from "@/components/SignInBanner";
 import { formatDueLabel, getDueCheckIns, listOpenCommitments } from "@/lib/checkins";
 import { getViewer } from "@/lib/viewer";
 
@@ -7,12 +8,30 @@ export const dynamic = "force-dynamic";
 
 export default async function CheckInsPage() {
   const viewer = await getViewer();
-  const due = await getDueCheckIns(viewer.sub);
+
+  if (!viewer.verified) {
+    return (
+      <div className="min-h-screen bg-canvas text-ink">
+        <AppHeader active="checkins" signedIn={false} />
+        <main className="mx-auto flex max-w-[800px] flex-col gap-6 px-4 py-10 sm:px-8">
+          <h1 className="m-0 font-display text-4xl font-bold tracking-tight">Check-ins</h1>
+          <SignInBanner />
+        </main>
+      </div>
+    );
+  }
+
+  const due = await getDueCheckIns(viewer.library);
   const commitments = await listOpenCommitments(viewer.sub);
 
   return (
     <div className="min-h-screen bg-canvas text-ink">
-      <AppHeader active="checkins" initial={viewer.initial} />
+      <AppHeader
+        active="checkins"
+        initial={viewer.initial}
+        signedIn
+        viewerName={viewer.name}
+      />
       <main className="mx-auto flex max-w-[900px] flex-col gap-8 px-4 py-10 sm:px-8 sm:pb-20">
         <div className="flex flex-col gap-2">
           <h1 className="m-0 font-display text-4xl font-bold tracking-tight">Check-ins</h1>
@@ -23,23 +42,29 @@ export default async function CheckInsPage() {
 
         <section className="flex flex-col gap-3">
           <h2 className="m-0 font-display text-xl font-bold">Upcoming</h2>
-          {due.map((item) => (
-            <Link
-              key={`${item.bookId}:${item.chapterId}`}
-              href={`/books/${item.bookId}/chapters/${item.chapterId}/action`}
-              className="flex items-center justify-between gap-4 rounded-panel border border-line bg-white p-5 text-ink no-underline"
-            >
-              <span className="flex flex-col gap-1">
-                <span className="text-[15px] font-semibold">
-                  Ch {item.chapterNumber} · {item.title}
+          {due.length === 0 ? (
+            <div className="rounded-panel border border-line bg-white p-5 text-sm text-muted">
+              Upload a book to start recurring check-ins.
+            </div>
+          ) : (
+            due.map((item) => (
+              <Link
+                key={`${item.bookId}:${item.chapterId}`}
+                href={`/books/${item.bookId}/chapters/${item.chapterId}/action`}
+                className="flex items-center justify-between gap-4 rounded-panel border border-line bg-white p-5 text-ink no-underline"
+              >
+                <span className="flex flex-col gap-1">
+                  <span className="text-[15px] font-semibold">
+                    Ch {item.chapterNumber} · {item.title}
+                  </span>
+                  <span className="text-[13px] text-muted">
+                    {formatDueLabel(item.diffDays, item.cadence, item.dueDate)}
+                  </span>
                 </span>
-                <span className="text-[13px] text-muted">
-                  {formatDueLabel(item.diffDays, item.cadence, item.dueDate)}
-                </span>
-              </span>
-              <span className="text-sm font-semibold text-brand">Open →</span>
-            </Link>
-          ))}
+                <span className="text-sm font-semibold text-brand">Open →</span>
+              </Link>
+            ))
+          )}
         </section>
 
         <section className="flex flex-col gap-3">

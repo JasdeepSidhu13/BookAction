@@ -4,7 +4,12 @@ import {
   listOpenCommitments,
 } from "@/lib/checkins";
 import { sql } from "@/lib/db";
-import { getDefaultCatalogBook, listLibraryBooks, resolveBook, resolveChapter } from "@/lib/library";
+import {
+  listLibraryBooks,
+  resolveBook,
+  resolveChapter,
+  type LibraryAccess,
+} from "@/lib/library";
 import { computeBankInsights } from "@/lib/questionBank";
 import type { AnswerRow, Book, CheckInRow, CommitmentRow } from "@/lib/types";
 
@@ -18,10 +23,10 @@ function round1(n: number): number {
 }
 
 async function scaleAnswersForCheckIn(
-  ownerSub: string,
+  access: LibraryAccess,
   checkIn: CheckInRow,
 ): Promise<number[]> {
-  const chapter = await resolveChapter(ownerSub, checkIn.book_id, checkIn.chapter_id);
+  const chapter = await resolveChapter(access, checkIn.book_id, checkIn.chapter_id);
   if (!chapter) return [];
   const scaleIds = new Set(
     chapter.chapter.questions.filter((q) => q.type === "scale").map((q) => q.id),
@@ -32,12 +37,16 @@ async function scaleAnswersForCheckIn(
     .map((a) => a.value_number as number);
 }
 
-export async function computeProgress(ownerSub: string, bookId?: string, rangeWeeks = 8) {
-  const library = await listLibraryBooks(ownerSub);
+export async function computeProgress(
+  access: LibraryAccess,
+  bookId?: string,
+  rangeWeeks = 8,
+) {
+  const ownerSub = access.sub;
+  const library = await listLibraryBooks(access);
   const book =
-    (bookId ? await resolveBook(ownerSub, bookId) : undefined) ??
-    library[0] ??
-    getDefaultCatalogBook();
+    (bookId ? await resolveBook(access, bookId) : undefined) ?? library[0];
+  if (!book) return null;
   const submitted = await getSubmittedCheckIns(ownerSub, book.id);
   const since = new Date();
   since.setDate(since.getDate() - rangeWeeks * 7);
@@ -47,7 +56,7 @@ export async function computeProgress(ownerSub: string, bookId?: string, rangeWe
 
   const growthPoints: { date: string; score: number }[] = [];
   for (const checkIn of inRange) {
-    const scales = await scaleAnswersForCheckIn(ownerSub, checkIn);
+    const scales = await scaleAnswersForCheckIn(access, checkIn);
     const score = avg(scales);
     if (score != null && checkIn.submitted_at) {
       growthPoints.push({ date: checkIn.submitted_at, score: round1(score) });
@@ -56,10 +65,10 @@ export async function computeProgress(ownerSub: string, bookId?: string, rangeWe
 
   const allScores: number[] = [];
   for (const checkIn of submitted) {
-    allScores.push(...(await scaleAnswersForCheckIn(ownerSub, checkIn)));
+    allScores.push(...(await scaleAnswersForCheckIn(access, checkIn)));
   }
   const firstScores: number[] = [];
-  if (submitted[0]) firstScores.push(...(await scaleAnswersForCheckIn(ownerSub, submitted[0])));
+  if (submitted[0]) firstScores.push(...(await scaleAnswersForCheckIn(access, submitted[0])));
 
   const growthIndex = avg(growthPoints.map((p) => p.score).slice(-3)) ?? avg(allScores);
   const firstIndex = avg(firstScores);
@@ -76,7 +85,7 @@ export async function computeProgress(ownerSub: string, bookId?: string, rangeWe
   );
   const followChoices = [];
   for (const a of choiceAnswers) {
-    const ch = await resolveChapter(ownerSub, a.book_id, a.chapter_id);
+    const ch = await resolveChapter(access, a.book_id, a.chapter_id);
     const q = ch?.chapter.questions.find((qq) => qq.id === a.question_id);
     if (q?.followsCommitment) followChoices.push(a);
   }
@@ -109,9 +118,9 @@ export async function computeProgress(ownerSub: string, bookId?: string, rangeWe
           checkInCount: 0,
         };
       }
-      const first = avg(await scaleAnswersForCheckIn(ownerSub, chapterCheckIns[0]));
+      const first = avg(await scaleAnswersForCheckIn(access, chapterCheckIns[0]));
       const latest = avg(
-        await scaleAnswersForCheckIn(ownerSub, chapterCheckIns[chapterCheckIns.length - 1]),
+        await scaleAnswersForCheckIn(access, chapterCheckIns[chapterCheckIns.length - 1]),
       );
       return {
         chapterId: chapter.id,
@@ -126,7 +135,7 @@ export async function computeProgress(ownerSub: string, bookId?: string, rangeWe
   );
 
   const heatmap = buildHeatmap(submitted, 12);
-  const questionChanges = await buildQuestionChanges(ownerSub, book.id, submitted);
+  const questionChanges = await buildQuestionChanges(access, book.id, submitted);
   const insights = buildInsights({
     book,
     bookId: book.id,
@@ -147,7 +156,7 @@ export async function computeProgress(ownerSub: string, bookId?: string, rangeWe
   );
 
   const chaptersTouched = new Set(submitted.map((c) => c.chapter_id)).size;
-  const bank = await computeBankInsights(ownerSub, book.id);
+  const bank = await computeBankInsights(access, book.id);
 
   if (bank.totalAnswers > 0) {
     const top = bank.chapterActivity[0];
@@ -214,7 +223,11 @@ function buildHeatmap(submitted: CheckInRow[], weeks: number): number[] {
   return result;
 }
 
-async function buildQuestionChanges(ownerSub: string, bookId: string, submitted: CheckInRow[]) {
+async function buildQuestionChanges(
+  access: LibraryAccess,
+  bookId: string,
+  submitted: CheckInRow[],
+) {
   const byChapter = new Map<string, CheckInRow[]>();
   for (const c of submitted) {
     const list = byChapter.get(c.chapter_id) ?? [];
@@ -231,7 +244,7 @@ async function buildQuestionChanges(ownerSub: string, bookId: string, submitted:
   }[] = [];
 
   for (const [chapterId, list] of byChapter) {
-    const chapter = await resolveChapter(ownerSub, bookId, chapterId);
+    const chapter = await resolveChapter(access, bookId, chapterId);
     if (!chapter) continue;
     const firstAnswers = await getAnswersForCheckIn(list[0].id);
     const latestAnswers = await getAnswersForCheckIn(list[list.length - 1].id);

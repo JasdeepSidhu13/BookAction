@@ -1,5 +1,5 @@
 import { sql } from "@/lib/db";
-import { listLibraryBooks, resolveChapter } from "@/lib/library";
+import { listLibraryBooks, resolveChapter, type LibraryAccess } from "@/lib/library";
 import { LIMITS, clampText } from "@/lib/limits";
 import type {
   AnswerMap,
@@ -215,7 +215,11 @@ export async function saveAnswers(
   await sql(`update check_ins set updated_at = now() where id = $1`, [checkInId]);
 }
 
-export async function submitCheckIn(ownerSub: string, checkInId: number): Promise<CheckInRow> {
+export async function submitCheckIn(
+  access: LibraryAccess,
+  checkInId: number,
+): Promise<CheckInRow> {
+  const ownerSub = access.sub;
   const rows = await sql<CheckInRow>(
     `select * from check_ins where id = $1 and owner_sub = $2`,
     [checkInId, ownerSub],
@@ -233,7 +237,7 @@ export async function submitCheckIn(ownerSub: string, checkInId: number): Promis
     [checkInId],
   );
 
-  const chapter = await resolveChapter(ownerSub, checkIn.book_id, checkIn.chapter_id);
+  const chapter = await resolveChapter(access, checkIn.book_id, checkIn.chapter_id);
   const commitmentQuestion = chapter?.chapter.questions.find((q) => q.tracksCommitment);
   if (commitmentQuestion) {
     const answers = await getAnswersMap(checkInId);
@@ -288,7 +292,8 @@ export function answeredCount(questions: Question[], answers: AnswerMap): number
   }).length;
 }
 
-export async function getDueCheckIns(ownerSub: string) {
+export async function getDueCheckIns(access: LibraryAccess) {
+  const ownerSub = access.sub;
   const settings = await sql<{
     book_id: string;
     chapter_id: string;
@@ -300,7 +305,7 @@ export async function getDueCheckIns(ownerSub: string) {
   );
   const byKey = new Map(settings.map((s) => [`${s.book_id}:${s.chapter_id}`, s]));
 
-  const library = await listLibraryBooks(ownerSub);
+  const library = await listLibraryBooks(access);
   const items = [];
   for (const book of library) {
     for (const chapter of book.chapters) {

@@ -16,16 +16,21 @@ export default async function ChapterSummaryPage({
 }) {
   const { bookId, chapterId } = await params;
   const viewer = await getViewer();
-  const data = await resolveChapter(viewer.sub, bookId, chapterId);
+  const data = await resolveChapter(viewer.library, bookId, chapterId);
   if (!data) notFound();
   const { book, chapter } = data;
-  const due = await getDueCheckIns(viewer.sub);
+  const due = viewer.verified ? await getDueCheckIns(viewer.library) : [];
   const thisDue = due.find((d) => d.chapterId === chapter.id);
   const actionDue = thisDue && thisDue.diffDays <= 1;
 
   return (
     <div className="min-h-screen bg-canvas text-ink">
-      <AppHeader active="library" initial={viewer.initial} />
+      <AppHeader
+        active="library"
+        initial={viewer.initial}
+        signedIn={viewer.verified}
+        viewerName={viewer.name}
+      />
 
       <div className="mx-auto flex max-w-[1200px] flex-wrap items-start gap-10 px-4 py-8 sm:px-8 sm:pb-20">
         <aside aria-label="Chapters" className="flex w-full max-w-[300px] flex-[1_1_260px] flex-col gap-5">

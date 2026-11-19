@@ -2,6 +2,8 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { BookCover } from "@/components/BookCover";
+import { EmptyLibrary } from "@/components/EmptyLibrary";
+import { SignInBanner } from "@/components/SignInBanner";
 import { formatDueLabel, getDueCheckIns } from "@/lib/checkins";
 import { listLibraryBooks } from "@/lib/library";
 import { computeProgress } from "@/lib/progress";
@@ -11,30 +13,89 @@ export const dynamic = "force-dynamic";
 
 export default async function LibraryPage() {
   const viewer = await getViewer();
-  const books = await listLibraryBooks(viewer.sub);
+  const books = await listLibraryBooks(viewer.library);
   const book = books[0];
-  const continueChapter = book.chapters[1] ?? book.chapters[0];
-  const due = await getDueCheckIns(viewer.sub);
-  const progress = await computeProgress(viewer.sub, book.id);
-  const completedHint = Math.max(progress.chaptersTouched, 1);
   const today = new Date().toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",
     day: "numeric",
   });
+
+  if (!viewer.verified) {
+    return (
+      <div className="min-h-screen bg-canvas text-ink">
+        <AppHeader active="library" signedIn={false} />
+        <main className="mx-auto flex max-w-[800px] flex-col gap-8 px-4 py-10 sm:px-8 sm:pb-16">
+          <div className="animate-fade-up flex flex-col gap-2">
+            <p className="m-0 text-sm font-medium text-muted">{today}</p>
+            <h1 className="m-0 font-display text-[2rem] font-bold leading-[1.15] tracking-tight sm:text-[40px]">
+              Your private reading library
+            </h1>
+            <p className="m-0 text-[15px] leading-[1.55] text-soft">
+              Sign in so uploads and check-ins stay tied to your account. New
+              accounts start with a clean slate — upload a book to begin.
+            </p>
+          </div>
+          <SignInBanner />
+        </main>
+      </div>
+    );
+  }
+
+  if (!book) {
+    return (
+      <div className="min-h-screen bg-canvas text-ink">
+        <AppHeader
+          active="library"
+          initial={viewer.initial}
+          showAddBook
+          signedIn
+          viewerName={viewer.name}
+        />
+        <main className="mx-auto flex max-w-[800px] flex-col gap-8 px-4 py-10 sm:px-8 sm:pb-16">
+          <div className="animate-fade-up flex flex-col gap-2">
+            <p className="m-0 text-sm font-medium text-muted">{today}</p>
+            <h1 className="m-0 font-display text-[2rem] font-bold leading-[1.15] tracking-tight sm:text-[40px]">
+              Welcome, {viewer.name.split(" ")[0]}.
+            </h1>
+            {viewer.simulated ? (
+              <p className="m-0 text-sm text-muted">
+                Local preview uses a simulated viewer until you publish.
+              </p>
+            ) : null}
+          </div>
+          <EmptyLibrary verified />
+        </main>
+      </div>
+    );
+  }
+
+  const continueChapter = book.chapters[1] ?? book.chapters[0];
+  const due = await getDueCheckIns(viewer.library);
+  const progress = await computeProgress(viewer.library, book.id);
+  const completedHint = Math.max(progress?.chaptersTouched ?? 0, 1);
   const dueNow = due.filter((d) => d.diffDays <= 1);
 
   return (
     <div className="min-h-screen bg-canvas text-ink">
-      <AppHeader active="library" initial={viewer.initial} showAddBook />
+      <AppHeader
+        active="library"
+        initial={viewer.initial}
+        showAddBook
+        signedIn
+        viewerName={viewer.name}
+      />
       <main className="mx-auto flex max-w-[1200px] flex-col gap-10 px-4 py-10 sm:px-8 sm:pb-16">
         <div className="animate-fade-up flex flex-col gap-2">
           <p className="m-0 text-sm font-medium text-muted">{today}</p>
           <h1 className="m-0 font-display text-[2rem] font-bold leading-[1.15] tracking-tight sm:text-[40px]">
-            Welcome back. You have {dueNow.length} check-in{dueNow.length === 1 ? "" : "s"} due.
+            Welcome back. You have {dueNow.length} check-in
+            {dueNow.length === 1 ? "" : "s"} due.
           </h1>
           {viewer.simulated ? (
-            <p className="m-0 text-sm text-muted">Local preview uses a simulated viewer until you publish.</p>
+            <p className="m-0 text-sm text-muted">
+              Local preview uses a simulated viewer until you publish.
+            </p>
           ) : null}
         </div>
 
@@ -153,7 +214,7 @@ export default async function LibraryPage() {
           <Stat
             label="Growth index"
             value={
-              progress.growthIndex != null ? (
+              progress?.growthIndex != null ? (
                 <>
                   {progress.growthIndex.toFixed(1)}
                   <span className="text-base font-semibold text-muted"> / 10</span>
@@ -163,33 +224,33 @@ export default async function LibraryPage() {
               )
             }
             hint={
-              progress.growthDelta != null
+              progress?.growthDelta != null
                 ? `▲ ${Math.abs(progress.growthDelta).toFixed(1)} since first check-in`
                 : "Start check-ins to unlock"
             }
-            hintClass={progress.growthDelta != null ? "text-success font-semibold" : "text-soft"}
+            hintClass={progress?.growthDelta != null ? "text-success font-semibold" : "text-soft"}
           />
           <Stat
             label="Check-in streak"
             value={
               <>
-                {progress.streak}
+                {progress?.streak ?? 0}
                 <span className="text-base font-semibold text-muted"> weeks</span>
               </>
             }
-            hint={progress.streak > 0 ? "Active weeks so far" : "No submissions yet"}
+            hint={(progress?.streak ?? 0) > 0 ? "Active weeks so far" : "No submissions yet"}
           />
           <Stat
             label="Follow-through"
-            value={progress.followThrough != null ? `${progress.followThrough}%` : "—"}
+            value={progress?.followThrough != null ? `${progress.followThrough}%` : "—"}
             hint="Committed actions completed"
           />
           <Stat
             label="Answers logged"
-            value={String(progress.answersLogged)}
+            value={String(progress?.answersLogged ?? 0)}
             hint={
-              progress.chaptersTouched > 0
-                ? `Across ${progress.chaptersTouched} chapter${progress.chaptersTouched === 1 ? "" : "s"}`
+              (progress?.chaptersTouched ?? 0) > 0
+                ? `Across ${progress!.chaptersTouched} chapter${progress!.chaptersTouched === 1 ? "" : "s"}`
                 : "Waiting for your first answers"
             }
           />

@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { isValidBookChapter } from "@/content/books";
 import {
   ensureDraftCheckIn,
   saveAnswers,
   setCadence,
   submitCheckIn,
 } from "@/lib/checkins";
+import { isAccessibleBookChapter } from "@/lib/library";
 import type { AnswerMap, Cadence } from "@/lib/types";
 import { requireIdentity } from "../../../../cursor/identity";
 
@@ -27,7 +27,7 @@ export async function POST(request: Request) {
     mode: "draft" | "submit";
   };
 
-  if (!isValidBookChapter(body.bookId, body.chapterId)) {
+  if (!(await isAccessibleBookChapter(identity.sub, body.bookId, body.chapterId))) {
     return NextResponse.json({ error: "unknown_chapter" }, { status: 400 });
   }
 
@@ -68,7 +68,7 @@ export async function PATCH(request: Request) {
     chapterId: string;
     cadence: Cadence;
   };
-  if (!isValidBookChapter(body.bookId, body.chapterId)) {
+  if (!(await isAccessibleBookChapter(identity.sub, body.bookId, body.chapterId))) {
     return NextResponse.json({ error: "unknown_chapter" }, { status: 400 });
   }
   await setCadence(identity.sub, body.bookId, body.chapterId, body.cadence);

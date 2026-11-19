@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { isValidBookChapter } from "@/content/books";
+import { isAccessibleBookChapter } from "@/lib/library";
 import {
   addCustomQuestion,
   listBankAnswers,
@@ -30,7 +30,7 @@ export async function GET(request: Request) {
     chapterId || undefined,
   );
   const custom =
-    chapterId && isValidBookChapter(bookId, chapterId)
+    chapterId && (await isAccessibleBookChapter(identity.sub, bookId, chapterId))
       ? await listCustomQuestions(identity.sub, bookId, chapterId)
       : [];
 
@@ -59,7 +59,7 @@ export async function POST(request: Request) {
     prompt?: string;
   };
 
-  if (!isValidBookChapter(body.bookId, body.chapterId)) {
+  if (!(await isAccessibleBookChapter(identity.sub, body.bookId, body.chapterId))) {
     return NextResponse.json({ error: "unknown_chapter" }, { status: 400 });
   }
 

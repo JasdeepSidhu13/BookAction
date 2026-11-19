@@ -1,5 +1,6 @@
-import { getChapter, isValidBookChapter } from "@/content/books";
 import { sql } from "@/lib/db";
+import { isAccessibleBookChapter, resolveBook, resolveChapter } from "@/lib/library";
+import { LIMITS, clampText } from "@/lib/limits";
 import type { BankAnswerRow, BankQuestion, CustomQuestionRow } from "@/lib/types";
 
 export async function listCustomQuestions(
@@ -21,10 +22,10 @@ export async function addCustomQuestion(
   chapterId: string,
   prompt: string,
 ): Promise<CustomQuestionRow> {
-  if (!isValidBookChapter(bookId, chapterId)) {
+  if (!(await isAccessibleBookChapter(ownerSub, bookId, chapterId))) {
     throw new Error("unknown_chapter");
   }
-  const trimmed = prompt.trim();
+  const trimmed = clampText(prompt, LIMITS.customPrompt);
   if (!trimmed) throw new Error("empty_prompt");
   const rows = await sql<CustomQuestionRow>(
     `insert into custom_questions (owner_sub, book_id, chapter_id, prompt)
@@ -81,11 +82,12 @@ export async function saveBankAnswer(input: {
   valueNumber?: number | null;
   source: "catalog" | "custom";
 }): Promise<BankAnswerRow> {
-  if (!isValidBookChapter(input.bookId, input.chapterId)) {
+  if (!(await isAccessibleBookChapter(input.ownerSub, input.bookId, input.chapterId))) {
     throw new Error("unknown_chapter");
   }
-  const questionText = input.questionText.trim();
+  const questionText = clampText(input.questionText, LIMITS.questionText);
   if (!questionText) throw new Error("empty_question");
+  const answerText = input.answerText != null ? clampText(input.answerText, LIMITS.answerText) : null;
 
   // Always insert a new row so history accumulates for insights.
   const rows = await sql<BankAnswerRow>(
@@ -99,7 +101,7 @@ export async function saveBankAnswer(input: {
       input.chapterId,
       input.questionId ?? null,
       questionText,
-      input.answerText?.trim() || null,
+      answerText || null,
       input.valueNumber ?? null,
       input.source,
     ],
@@ -107,13 +109,18 @@ export async function saveBankAnswer(input: {
   return rows[0];
 }
 
-export function catalogQuestionsForChapter(bookId: string, chapterId: string): BankQuestion[] {
-  const data = getChapter(bookId, chapterId);
+export async function catalogQuestionsForChapter(
+  ownerSub: string,
+  bookId: string,
+  chapterId: string,
+): Promise<BankQuestion[]> {
+  const data = await resolveChapter(ownerSub, bookId, chapterId);
   return data?.chapter.bankQuestions ?? [];
 }
 
 export async function computeBankInsights(ownerSub: string, bookId: string) {
   const answers = await listBankAnswers(ownerSub, bookId);
+  const book = await resolveBook(ownerSub, bookId);
   const byChapter = new Map<string, BankAnswerRow[]>();
   for (const a of answers) {
     const list = byChapter.get(a.chapter_id) ?? [];
@@ -129,7 +136,7 @@ export async function computeBankInsights(ownerSub: string, bookId: string) {
 
   const chapterActivity = [...byChapter.entries()]
     .map(([chapterId, rows]) => {
-      const ch = getChapter(bookId, chapterId)?.chapter;
+      const ch = book?.chapters.find((c) => c.id === chapterId);
       const uniqueQs = new Set(rows.map((r) => r.question_id ?? r.question_text)).size;
       return {
         chapterId,
@@ -145,7 +152,8 @@ export async function computeBankInsights(ownerSub: string, bookId: string) {
   const recent = answers.slice(0, 8).map((a) => ({
     id: a.id,
     chapterId: a.chapter_id,
-    chapterTitle: getChapter(bookId, a.chapter_id)?.chapter.shortTitle ?? a.chapter_id,
+    chapterTitle:
+      book?.chapters.find((c) => c.id === a.chapter_id)?.shortTitle ?? a.chapter_id,
     questionText: a.question_text,
     answerText: a.answer_text,
     updatedAt: a.updated_at,

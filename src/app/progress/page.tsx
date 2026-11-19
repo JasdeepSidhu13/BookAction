@@ -1,6 +1,6 @@
 import { AppHeader } from "@/components/AppHeader";
 import { ProgressClient } from "@/components/ProgressClient";
-import { books } from "@/content/books";
+import { listLibraryBooks } from "@/lib/library";
 import { computeProgress } from "@/lib/progress";
 import { getViewer } from "@/lib/viewer";
 
@@ -13,6 +13,7 @@ export default async function ProgressPage({
 }) {
   const viewer = await getViewer();
   const params = await searchParams;
+  const books = await listLibraryBooks(viewer.sub);
   const bookId = params.book ?? books[0].id;
   const range = params.range ?? "8";
   const rangeWeeks = Number(range) || 8;

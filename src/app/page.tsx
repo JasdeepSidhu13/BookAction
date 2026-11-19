@@ -2,8 +2,8 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { BookCover } from "@/components/BookCover";
-import { books, getDefaultBook } from "@/content/books";
 import { formatDueLabel, getDueCheckIns } from "@/lib/checkins";
+import { listLibraryBooks } from "@/lib/library";
 import { computeProgress } from "@/lib/progress";
 import { getViewer } from "@/lib/viewer";
 
@@ -11,7 +11,8 @@ export const dynamic = "force-dynamic";
 
 export default async function LibraryPage() {
   const viewer = await getViewer();
-  const book = getDefaultBook();
+  const books = await listLibraryBooks(viewer.sub);
+  const book = books[0];
   const continueChapter = book.chapters[1] ?? book.chapters[0];
   const due = await getDueCheckIns(viewer.sub);
   const progress = await computeProgress(viewer.sub, book.id);
@@ -219,16 +220,16 @@ export default async function LibraryPage() {
                 </span>
               </Link>
             ))}
-            <button
-              type="button"
-              className="flex aspect-[7/10] flex-col items-center justify-center gap-2.5 rounded-control border-[1.5px] border-dashed border-[#C9C8C1] bg-transparent text-sm font-medium text-soft"
+            <Link
+              href="/upload"
+              className="flex aspect-[7/10] flex-col items-center justify-center gap-2.5 rounded-control border-[1.5px] border-dashed border-[#C9C8C1] bg-transparent text-sm font-medium text-soft no-underline"
             >
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#52525B" strokeWidth="1.6" strokeLinecap="round" aria-hidden>
                 <path d="M12 5v14M5 12h14" />
               </svg>
               Add a book
-              <span className="text-xs text-muted">Import chapters, summaries & questions</span>
-            </button>
+              <span className="text-xs text-muted">Upload PDF · generate summaries & questions</span>
+            </Link>
           </div>
         </section>
       </main>

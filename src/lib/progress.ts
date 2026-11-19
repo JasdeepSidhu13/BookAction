@@ -1,12 +1,12 @@
-import { books, getChapter, getDefaultBook } from "@/content/books";
 import {
   getAnswersForCheckIn,
   getSubmittedCheckIns,
   listOpenCommitments,
 } from "@/lib/checkins";
 import { sql } from "@/lib/db";
+import { getDefaultCatalogBook, listLibraryBooks, resolveBook, resolveChapter } from "@/lib/library";
 import { computeBankInsights } from "@/lib/questionBank";
-import type { AnswerRow, CheckInRow, CommitmentRow } from "@/lib/types";
+import type { AnswerRow, Book, CheckInRow, CommitmentRow } from "@/lib/types";
 
 function avg(nums: number[]): number | null {
   if (nums.length === 0) return null;
@@ -17,8 +17,11 @@ function round1(n: number): number {
   return Math.round(n * 10) / 10;
 }
 
-async function scaleAnswersForCheckIn(checkIn: CheckInRow): Promise<number[]> {
-  const chapter = getChapter(checkIn.book_id, checkIn.chapter_id);
+async function scaleAnswersForCheckIn(
+  ownerSub: string,
+  checkIn: CheckInRow,
+): Promise<number[]> {
+  const chapter = await resolveChapter(ownerSub, checkIn.book_id, checkIn.chapter_id);
   if (!chapter) return [];
   const scaleIds = new Set(
     chapter.chapter.questions.filter((q) => q.type === "scale").map((q) => q.id),
@@ -30,7 +33,11 @@ async function scaleAnswersForCheckIn(checkIn: CheckInRow): Promise<number[]> {
 }
 
 export async function computeProgress(ownerSub: string, bookId?: string, rangeWeeks = 8) {
-  const book = bookId ? books.find((b) => b.id === bookId) ?? getDefaultBook() : getDefaultBook();
+  const library = await listLibraryBooks(ownerSub);
+  const book =
+    (bookId ? await resolveBook(ownerSub, bookId) : undefined) ??
+    library[0] ??
+    getDefaultCatalogBook();
   const submitted = await getSubmittedCheckIns(ownerSub, book.id);
   const since = new Date();
   since.setDate(since.getDate() - rangeWeeks * 7);
@@ -40,7 +47,7 @@ export async function computeProgress(ownerSub: string, bookId?: string, rangeWe
 
   const growthPoints: { date: string; score: number }[] = [];
   for (const checkIn of inRange) {
-    const scales = await scaleAnswersForCheckIn(checkIn);
+    const scales = await scaleAnswersForCheckIn(ownerSub, checkIn);
     const score = avg(scales);
     if (score != null && checkIn.submitted_at) {
       growthPoints.push({ date: checkIn.submitted_at, score: round1(score) });
@@ -49,10 +56,10 @@ export async function computeProgress(ownerSub: string, bookId?: string, rangeWe
 
   const allScores: number[] = [];
   for (const checkIn of submitted) {
-    allScores.push(...(await scaleAnswersForCheckIn(checkIn)));
+    allScores.push(...(await scaleAnswersForCheckIn(ownerSub, checkIn)));
   }
   const firstScores: number[] = [];
-  if (submitted[0]) firstScores.push(...(await scaleAnswersForCheckIn(submitted[0])));
+  if (submitted[0]) firstScores.push(...(await scaleAnswersForCheckIn(ownerSub, submitted[0])));
 
   const growthIndex = avg(growthPoints.map((p) => p.score).slice(-3)) ?? avg(allScores);
   const firstIndex = avg(firstScores);
@@ -67,11 +74,12 @@ export async function computeProgress(ownerSub: string, bookId?: string, rangeWe
        and a.value_choice is not null`,
     [ownerSub, book.id],
   );
-  const followChoices = choiceAnswers.filter((a) => {
-    const ch = getChapter(a.book_id, a.chapter_id);
+  const followChoices = [];
+  for (const a of choiceAnswers) {
+    const ch = await resolveChapter(ownerSub, a.book_id, a.chapter_id);
     const q = ch?.chapter.questions.find((qq) => qq.id === a.question_id);
-    return q?.followsCommitment;
-  });
+    if (q?.followsCommitment) followChoices.push(a);
+  }
   const yesCount = followChoices.filter((a) => a.value_choice === "Yes").length;
   const partlyCount = followChoices.filter((a) => a.value_choice === "Partly").length;
   const followThrough =
@@ -101,9 +109,9 @@ export async function computeProgress(ownerSub: string, bookId?: string, rangeWe
           checkInCount: 0,
         };
       }
-      const first = avg(await scaleAnswersForCheckIn(chapterCheckIns[0]));
+      const first = avg(await scaleAnswersForCheckIn(ownerSub, chapterCheckIns[0]));
       const latest = avg(
-        await scaleAnswersForCheckIn(chapterCheckIns[chapterCheckIns.length - 1]),
+        await scaleAnswersForCheckIn(ownerSub, chapterCheckIns[chapterCheckIns.length - 1]),
       );
       return {
         chapterId: chapter.id,
@@ -120,6 +128,7 @@ export async function computeProgress(ownerSub: string, bookId?: string, rangeWe
   const heatmap = buildHeatmap(submitted, 12);
   const questionChanges = await buildQuestionChanges(ownerSub, book.id, submitted);
   const insights = buildInsights({
+    book,
     bookId: book.id,
     growthDelta,
     chapterStats,
@@ -222,7 +231,7 @@ async function buildQuestionChanges(ownerSub: string, bookId: string, submitted:
   }[] = [];
 
   for (const [chapterId, list] of byChapter) {
-    const chapter = getChapter(bookId, chapterId);
+    const chapter = await resolveChapter(ownerSub, bookId, chapterId);
     if (!chapter) continue;
     const firstAnswers = await getAnswersForCheckIn(list[0].id);
     const latestAnswers = await getAnswersForCheckIn(list[list.length - 1].id);
@@ -254,6 +263,7 @@ function shortenPrompt(prompt: string): string {
 }
 
 function buildInsights(input: {
+  book: Book;
   bookId: string;
   growthDelta: number | null;
   chapterStats: {
@@ -278,7 +288,7 @@ function buildInsights(input: {
     commitmentId?: number;
   }[] = [];
 
-  const insightBook = books.find((b) => b.id === input.bookId) ?? getDefaultBook();
+  const insightBook = input.book;
   const chapterIdByNumber = (num: number) =>
     insightBook.chapters.find((c) => c.number === num)?.id ?? insightBook.chapters[0]?.id ?? "";
 

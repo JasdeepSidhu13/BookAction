@@ -1,6 +1,6 @@
 import { AppHeader } from "@/components/AppHeader";
 import { QuestionBankClient } from "@/components/QuestionBankClient";
-import { books, getBook, getDefaultBook } from "@/content/books";
+import { listLibraryBooks, resolveBook } from "@/lib/library";
 import {
   computeBankInsights,
   latestAnswersByQuestion,
@@ -18,7 +18,9 @@ export default async function QuestionBankPage({
 }) {
   const viewer = await getViewer();
   const params = await searchParams;
-  const book = getBook(params.book ?? "") ?? getDefaultBook();
+  const books = await listLibraryBooks(viewer.sub);
+  const book =
+    (await resolveBook(viewer.sub, params.book ?? "")) ?? books[0];
   const chapterId = params.chapter ?? book.chapters[1]?.id ?? book.chapters[0].id;
   const chapter =
     book.chapters.find((c) => c.id === chapterId) ?? book.chapters[0];

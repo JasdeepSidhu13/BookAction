@@ -3,8 +3,8 @@ import { notFound } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
 import { BookCover } from "@/components/BookCover";
 import { SummaryBlocks } from "@/components/SummaryBlocks";
-import { getChapter } from "@/content/books";
 import { getDueCheckIns } from "@/lib/checkins";
+import { resolveChapter } from "@/lib/library";
 import { getViewer } from "@/lib/viewer";
 
 export const dynamic = "force-dynamic";
@@ -15,10 +15,10 @@ export default async function ChapterSummaryPage({
   params: Promise<{ bookId: string; chapterId: string }>;
 }) {
   const { bookId, chapterId } = await params;
-  const data = getChapter(bookId, chapterId);
+  const viewer = await getViewer();
+  const data = await resolveChapter(viewer.sub, bookId, chapterId);
   if (!data) notFound();
   const { book, chapter } = data;
-  const viewer = await getViewer();
   const due = await getDueCheckIns(viewer.sub);
   const thisDue = due.find((d) => d.chapterId === chapter.id);
   const actionDue = thisDue && thisDue.diffDays <= 1;

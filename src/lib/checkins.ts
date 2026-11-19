@@ -1,5 +1,5 @@
-import { books, getChapter } from "@/content/books";
 import { sql } from "@/lib/db";
+import { listLibraryBooks, resolveChapter } from "@/lib/library";
 import type {
   AnswerMap,
   AnswerRow,
@@ -229,7 +229,7 @@ export async function submitCheckIn(ownerSub: string, checkInId: number): Promis
     [checkInId],
   );
 
-  const chapter = getChapter(checkIn.book_id, checkIn.chapter_id);
+  const chapter = await resolveChapter(ownerSub, checkIn.book_id, checkIn.chapter_id);
   const commitmentQuestion = chapter?.chapter.questions.find((q) => q.tracksCommitment);
   if (commitmentQuestion) {
     const answers = await getAnswersMap(checkInId);
@@ -296,10 +296,14 @@ export async function getDueCheckIns(ownerSub: string) {
   );
   const byKey = new Map(settings.map((s) => [`${s.book_id}:${s.chapter_id}`, s]));
 
+  const library = await listLibraryBooks(ownerSub);
   const items = [];
-  for (const book of books) {
+  for (const book of library) {
     for (const chapter of book.chapters) {
       const key = `${book.id}:${chapter.id}`;
+      const hasSetting = byKey.has(key);
+      // Keep the due list focused: early chapters, or anything the reader has touched.
+      if (!hasSetting && chapter.number > 3) continue;
       const setting = byKey.get(key) ?? { cadence: "weekly" as Cadence, status: "not_started" };
       const latestSubmitted = await sql<CheckInRow>(
         `select * from check_ins

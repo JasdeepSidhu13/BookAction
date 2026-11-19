@@ -34,6 +34,26 @@ type Props = {
     latest: number;
     change: number;
   }[];
+  bank: {
+    totalAnswers: number;
+    chaptersTouched: number;
+    answersLast7Days: number;
+    chapterActivity: {
+      chapterId: string;
+      number: number;
+      title: string;
+      answerCount: number;
+      uniqueQuestions: number;
+    }[];
+    recent: {
+      id: number;
+      chapterId: string;
+      chapterTitle: string;
+      questionText: string;
+      answerText: string | null;
+      updatedAt: string;
+    }[];
+  };
   kpis: {
     growthIndex: number | null;
     growthDelta: number | null;
@@ -256,6 +276,58 @@ export function ProgressClient(props: Props) {
             <InsightCard key={`${insight.kind}-${insight.title}`} insight={insight} onDone={markDone} />
           ))}
         </div>
+      </section>
+
+      <section
+        aria-labelledby="bank"
+        className="flex flex-col gap-4 rounded-card border border-line bg-white p-7"
+      >
+        <div className="flex flex-wrap items-baseline justify-between gap-3">
+          <h2 id="bank" className="m-0 font-display text-lg font-bold">
+            Question Bank activity
+          </h2>
+          <Link
+            href={`/question-bank?book=${props.selectedBookId}`}
+            className="text-sm font-semibold no-underline"
+          >
+            Open Question Bank →
+          </Link>
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="rounded-tile bg-canvas p-4">
+            <div className="text-[13px] text-muted">Bank answers</div>
+            <div className="font-display text-2xl font-bold">{props.bank.totalAnswers}</div>
+          </div>
+          <div className="rounded-tile bg-canvas p-4">
+            <div className="text-[13px] text-muted">Chapters with answers</div>
+            <div className="font-display text-2xl font-bold">{props.bank.chaptersTouched}</div>
+          </div>
+          <div className="rounded-tile bg-canvas p-4">
+            <div className="text-[13px] text-muted">Last 7 days</div>
+            <div className="font-display text-2xl font-bold">{props.bank.answersLast7Days}</div>
+          </div>
+        </div>
+        {props.bank.recent.length > 0 ? (
+          <div className="flex flex-col gap-3">
+            {props.bank.recent.slice(0, 4).map((r) => (
+              <div key={r.id} className="border-t border-wash pt-3">
+                <div className="text-[12px] font-semibold uppercase tracking-[0.06em] text-muted">
+                  {r.chapterTitle} ·{" "}
+                  {new Date(r.updatedAt).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                  })}
+                </div>
+                <div className="mt-1 text-sm font-semibold">{r.questionText}</div>
+                <div className="mt-1 text-sm text-soft">{r.answerText}</div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="m-0 text-sm text-muted">
+            Answer extended chapter questions in Question Bank to unlock deeper insights over time.
+          </p>
+        )}
       </section>
 
       <section

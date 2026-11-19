@@ -30,6 +30,7 @@ export default async function ProgressPage({
         heatmap={progress.heatmap}
         insights={progress.insights}
         questionChanges={progress.questionChanges}
+        bank={progress.bank}
         kpis={{
           growthIndex: progress.growthIndex,
           growthDelta: progress.growthDelta,

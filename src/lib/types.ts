@@ -35,6 +35,14 @@ export type Question = {
   followsCommitment?: boolean;
 };
 
+/** Full chapter question bank (catalog) — beyond the recurring check-in set. */
+export type BankQuestion = {
+  id: string;
+  prompt: string;
+  section?: string;
+  type?: "text" | "scale";
+};
+
 export type Chapter = {
   id: string;
   number: number;
@@ -44,7 +52,33 @@ export type Chapter = {
   teaser: string;
   readMinutes: number;
   summary: SummaryBlock[];
+  /** Curated recurring check-in questions (usually 5). */
   questions: Question[];
+  /** Full Notion/action question set for the chapter. */
+  bankQuestions: BankQuestion[];
+};
+
+export type BankAnswerRow = {
+  id: number;
+  owner_sub: string;
+  book_id: string;
+  chapter_id: string;
+  question_id: string | null;
+  question_text: string;
+  answer_text: string | null;
+  value_number: number | null;
+  source: "catalog" | "custom";
+  created_at: string;
+  updated_at: string;
+};
+
+export type CustomQuestionRow = {
+  id: number;
+  owner_sub: string;
+  book_id: string;
+  chapter_id: string;
+  prompt: string;
+  created_at: string;
 };
 
 export type Book = {

@@ -90,7 +90,19 @@ export default async function ActionCheckInPage({
               </h1>
               <p className="m-0 text-sm text-muted">{book.title}</p>
             </div>
+            <Link
+              href={`/question-bank?book=${book.id}&chapter=${chapter.id}`}
+              className="inline-flex h-11 items-center rounded-chip border border-line bg-white px-4 text-sm font-semibold text-ink no-underline"
+            >
+              Full question set · {chapter.bankQuestions.length} questions →
+            </Link>
           </div>
+        </div>
+
+        <div className="rounded-panel border border-line bg-brand-soft px-5 py-4 text-sm leading-[1.55] text-brand-dark">
+          This check-in uses a focused set of {chapter.questions.length} recurring questions.
+          Open the <strong>full question set</strong> for every Notion action prompt for this
+          chapter, add your own questions, and build answer history for insights.
         </div>
 
         <div

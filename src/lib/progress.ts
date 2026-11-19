@@ -5,6 +5,7 @@ import {
   listOpenCommitments,
 } from "@/lib/checkins";
 import { sql } from "@/lib/db";
+import { computeBankInsights } from "@/lib/questionBank";
 import type { AnswerRow, CheckInRow, CommitmentRow } from "@/lib/types";
 
 function avg(nums: number[]): number | null {
@@ -137,6 +138,20 @@ export async function computeProgress(ownerSub: string, bookId?: string, rangeWe
   );
 
   const chaptersTouched = new Set(submitted.map((c) => c.chapter_id)).size;
+  const bank = await computeBankInsights(ownerSub, book.id);
+
+  if (bank.totalAnswers > 0) {
+    const top = bank.chapterActivity[0];
+    insights.unshift({
+      kind: "pattern",
+      title: "Question Bank is building signal",
+      body: top
+        ? `${bank.totalAnswers} bank answers logged · most active: Ch ${top.number} (${top.answerCount}).`
+        : `${bank.totalAnswers} bank answers logged across ${bank.chaptersTouched} chapters.`,
+      href: `/question-bank?book=${book.id}`,
+      cta: "Open Question Bank →",
+    });
+  }
 
   return {
     book,
@@ -153,12 +168,13 @@ export async function computeProgress(ownerSub: string, bookId?: string, rangeWe
     growthPoints,
     chapterStats: chapterStats.filter((c) => c.checkInCount > 0 || c.number <= 3),
     heatmap,
-    insights,
+    insights: insights.slice(0, 4),
     questionChanges,
-    answersLogged: Number(answersLogged[0]?.count ?? 0),
-    chaptersTouched,
+    answersLogged: Number(answersLogged[0]?.count ?? 0) + bank.totalAnswers,
+    chaptersTouched: Math.max(chaptersTouched, bank.chaptersTouched),
     commitments: bookCommitments,
     submittedCount: submitted.length,
+    bank,
   };
 }
 

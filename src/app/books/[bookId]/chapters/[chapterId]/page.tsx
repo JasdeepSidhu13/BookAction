@@ -134,21 +134,39 @@ export default async function ChapterSummaryPage({
             <SummaryBlocks blocks={chapter.summary} />
           </div>
 
-          <Link
-            href={`/books/${book.id}/chapters/${chapter.id}/action`}
-            className="flex flex-wrap items-center justify-between gap-4 rounded-card bg-brand px-7 py-7 text-white no-underline"
-          >
-            <span className="flex flex-col gap-1">
-              <span className="font-display text-[22px] font-bold">Turn this chapter into action</span>
-              <span className="text-[15px] text-brand-pale">
-                {chapter.questions.length} questions · about {Math.max(5, chapter.questions.length + 1)} minutes
-                {thisDue ? ` · ${thisDue.cadence} check-in` : ""}
+          <div className="flex flex-col gap-3">
+            <Link
+              href={`/books/${book.id}/chapters/${chapter.id}/action`}
+              className="flex flex-wrap items-center justify-between gap-4 rounded-card bg-brand px-7 py-7 text-white no-underline"
+            >
+              <span className="flex flex-col gap-1">
+                <span className="font-display text-[22px] font-bold">Turn this chapter into action</span>
+                <span className="text-[15px] text-brand-pale">
+                  {chapter.questions.length} check-in questions · about{" "}
+                  {Math.max(5, chapter.questions.length + 1)} minutes
+                  {thisDue ? ` · ${thisDue.cadence} check-in` : ""}
+                </span>
               </span>
-            </span>
-            <span className="inline-flex h-12 items-center gap-2 rounded-control bg-white px-[22px] text-[15px] font-semibold text-brand">
-              Start check-in →
-            </span>
-          </Link>
+              <span className="inline-flex h-12 items-center gap-2 rounded-control bg-white px-[22px] text-[15px] font-semibold text-brand">
+                Start check-in →
+              </span>
+            </Link>
+            <Link
+              href={`/question-bank?book=${book.id}&chapter=${chapter.id}`}
+              className="flex flex-wrap items-center justify-between gap-4 rounded-card border border-line bg-white px-7 py-6 text-ink no-underline"
+            >
+              <span className="flex flex-col gap-1">
+                <span className="font-display text-[20px] font-bold">Full question set</span>
+                <span className="text-[15px] text-soft">
+                  {chapter.bankQuestions.length} action prompts from the chapter · answer anytime in
+                  Question Bank
+                </span>
+              </span>
+              <span className="inline-flex h-12 items-center gap-2 rounded-control bg-brand-soft px-[22px] text-[15px] font-semibold text-brand">
+                Open extended questions →
+              </span>
+            </Link>
+          </div>
 
           {/* Mobile sticky CTA */}
           <div className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-white p-4 sm:hidden">

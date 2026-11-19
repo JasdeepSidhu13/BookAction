@@ -1,6 +1,6 @@
 import type { Chapter } from "@/lib/types";
 
-export const ch6: Chapter = {
+export const ch6: Omit<Chapter, "bankQuestions"> = {
   id: "ch-6-neuro-associative-conditioning",
   number: 6,
   title: "How to Change Anything: Neuro-Associative Conditioning",

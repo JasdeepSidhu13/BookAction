@@ -1,10 +1,11 @@
 import Link from "next/link";
 
-type NavKey = "library" | "checkins" | "progress";
+type NavKey = "library" | "checkins" | "bank" | "progress";
 
 const links: { key: NavKey; href: string; label: string }[] = [
   { key: "library", href: "/", label: "Library" },
   { key: "checkins", href: "/check-ins", label: "Check-ins" },
+  { key: "bank", href: "/question-bank", label: "Question Bank" },
   { key: "progress", href: "/progress", label: "Progress" },
 ];
 

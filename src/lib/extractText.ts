@@ -7,7 +7,7 @@ export async function extractTextFromUpload(
     throw new Error("file_too_large");
   }
   const name = file.name.toLowerCase();
-  const type = file.type.toLowerCase();
+  const type = (file.type || "").toLowerCase();
 
   if (
     name.endsWith(".txt") ||
@@ -18,14 +18,22 @@ export async function extractTextFromUpload(
     return { text: clampSource(text), kind: "text" };
   }
 
-  if (name.endsWith(".pdf") || type === "application/pdf") {
+  const looksPdf =
+    name.endsWith(".pdf") ||
+    type === "application/pdf" ||
+    type === "application/x-pdf";
+
+  if (looksPdf) {
     const buffer = Buffer.from(await file.arrayBuffer());
-    // pdf-parse is CommonJS; dynamic import keeps the route light.
-    const pdfParse = (await import("pdf-parse")).default as (
+    // Import the implementation directly so Next/webpack never runs pdf-parse's debug harness.
+    const mod = await import("pdf-parse/lib/pdf-parse.js");
+    const pdfParse = (mod.default ?? mod) as (
       data: Buffer,
-    ) => Promise<{ text: string }>;
+    ) => Promise<{ text?: string }>;
     const parsed = await pdfParse(buffer);
-    return { text: clampSource(parsed.text || ""), kind: "pdf" };
+    const text = (parsed.text || "").trim();
+    if (!text) throw new Error("empty_text");
+    return { text: clampSource(text), kind: "pdf" };
   }
 
   throw new Error("unsupported_type");

@@ -27,6 +27,14 @@ export async function addCustomQuestion(
   }
   const trimmed = clampText(prompt, LIMITS.customPrompt);
   if (!trimmed) throw new Error("empty_prompt");
+  const existing = await sql<{ count: string }>(
+    `select count(*)::text as count from custom_questions
+     where owner_sub = $1 and book_id = $2 and chapter_id = $3`,
+    [ownerSub, bookId, chapterId],
+  );
+  if (Number(existing[0]?.count ?? 0) >= LIMITS.maxCustomQuestionsPerChapter) {
+    throw new Error("too_many_custom_questions");
+  }
   const rows = await sql<CustomQuestionRow>(
     `insert into custom_questions (owner_sub, book_id, chapter_id, prompt)
      values ($1, $2, $3, $4)
@@ -88,6 +96,15 @@ export async function saveBankAnswer(input: {
   const questionText = clampText(input.questionText, LIMITS.questionText);
   if (!questionText) throw new Error("empty_question");
   const answerText = input.answerText != null ? clampText(input.answerText, LIMITS.answerText) : null;
+
+  const existing = await sql<{ count: string }>(
+    `select count(*)::text as count from question_bank_answers
+     where owner_sub = $1 and book_id = $2 and chapter_id = $3`,
+    [input.ownerSub, input.bookId, input.chapterId],
+  );
+  if (Number(existing[0]?.count ?? 0) >= LIMITS.maxBankAnswersPerChapter) {
+    throw new Error("too_many_bank_answers");
+  }
 
   // Always insert a new row so history accumulates for insights.
   const rows = await sql<BankAnswerRow>(

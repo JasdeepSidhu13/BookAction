@@ -16,7 +16,6 @@ export function UploadBookClient({ viewerName, simulated, verified }: Props) {
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
   const [author, setAuthor] = useState("");
-  const [useLlm, setUseLlm] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [status, setStatus] = useState<string>("");
   const [busy, setBusy] = useState(false);
@@ -56,26 +55,25 @@ export function UploadBookClient({ viewerName, simulated, verified }: Props) {
       return;
     }
     setBusy(true);
-    setStatus(
-      useLlm
-        ? "Reading PDF and generating AI summaries (this can take a minute)…"
-        : "Reading PDF and building chapter summaries…",
-    );
+    setStatus("Reading PDF and extracting chapter summaries + action questions…");
     setResult(null);
     try {
       const body = new FormData();
       body.set("file", file);
       if (title.trim()) body.set("title", title.trim());
       if (author.trim()) body.set("author", author.trim());
-      if (useLlm) body.set("useLlm", "true");
       const res = await fetch("/api/books/upload", { method: "POST", body });
-      let data: { error?: string; detail?: string; book?: {
-        id: string;
-        title: string;
-        chapterCount: number;
-        generationMode: string;
-        firstChapterId?: string;
-      } } = {};
+      let data: {
+        error?: string;
+        detail?: string;
+        book?: {
+          id: string;
+          title: string;
+          chapterCount: number;
+          generationMode: string;
+          firstChapterId?: string;
+        };
+      } = {};
       try {
         data = await res.json();
       } catch {
@@ -90,7 +88,7 @@ export function UploadBookClient({ viewerName, simulated, verified }: Props) {
       }
       setResult(data.book);
       setStatus(
-        `Ready: ${data.book.chapterCount} chapters from your PDF (${data.book.generationMode} mode).`,
+        `Extracted ${data.book.chapterCount} chapters with summaries and action questions.`,
       );
       setBusy(false);
       if (data.book.firstChapterId) {
@@ -113,8 +111,9 @@ export function UploadBookClient({ viewerName, simulated, verified }: Props) {
           Upload a PDF
         </h1>
         <p className="m-0 text-[15px] leading-[1.6] text-soft">
-          Choose a PDF from your computer. Chapterwise extracts the chapters, builds summaries, and
-          creates Action + Question Bank prompts — saved privately for {viewerName}.
+          Upload any book PDF. Chapterwise extracts chapters, builds a summary for each, and creates
+          Action check-in + Question Bank prompts — no OpenAI call required. Saved privately for{" "}
+          {viewerName}.
         </p>
       </div>
 
@@ -158,16 +157,14 @@ export function UploadBookClient({ viewerName, simulated, verified }: Props) {
             pickFile(e.dataTransfer.files?.[0]);
           }}
           className={`flex flex-col items-center justify-center gap-3 rounded-[16px] border-[1.5px] border-dashed px-6 py-10 text-center ${
-            dragOver
-              ? "border-brand bg-brand-soft"
-              : "border-[#C9C8C1] bg-canvas"
+            dragOver ? "border-brand bg-brand-soft" : "border-[#C9C8C1] bg-canvas"
           }`}
         >
           <span className="font-display text-lg font-bold">
             {file ? file.name : "Drop a PDF here, or choose one"}
           </span>
           <span className="text-sm text-muted">
-            PDF preferred · also accepts .txt · max 12 MB
+            Any book PDF · also accepts .txt · max 12 MB
           </span>
           <button
             type="button"
@@ -202,25 +199,12 @@ export function UploadBookClient({ viewerName, simulated, verified }: Props) {
           </label>
         </div>
 
-        <label className="flex items-start gap-3 text-sm text-soft">
-          <input
-            type="checkbox"
-            checked={useLlm}
-            onChange={(e) => setUseLlm(e.target.checked)}
-            className="mt-1"
-          />
-          <span>
-            Enhance with AI (slower; uses your OpenAI key). Leave off for a fast, reliable PDF
-            import.
-          </span>
-        </label>
-
         <button
           type="submit"
           disabled={busy || !file}
           className="inline-flex h-12 items-center justify-center rounded-chip bg-brand px-5 text-sm font-semibold text-white disabled:opacity-60"
         >
-          {busy ? "Uploading & generating…" : "Upload PDF & generate"}
+          {busy ? "Extracting summaries & actions…" : "Upload PDF & extract"}
         </button>
 
         {status ? <p className="m-0 text-sm text-soft">{status}</p> : null}
@@ -238,21 +222,19 @@ export function UploadBookClient({ viewerName, simulated, verified }: Props) {
       </form>
 
       <section className="flex flex-col gap-3 rounded-panel border border-line bg-white p-6">
-        <h2 className="m-0 font-display text-xl font-bold">Where your data lives</h2>
+        <h2 className="m-0 font-display text-xl font-bold">What gets extracted</h2>
         <ul className="m-0 flex list-disc flex-col gap-2 pl-5 text-[15px] leading-[1.55] text-soft">
           <li>
-            <strong className="font-semibold text-ink">Storage:</strong> your app’s private Postgres
-            database (uploaded chapters, check-ins, answers, commitments, Question Bank history),
-            keyed to your signed-in Cursor identity.
+            <strong className="font-semibold text-ink">Summary:</strong> big idea, key ideas, insight,
+            and apply-it steps per chapter.
           </li>
           <li>
-            <strong className="font-semibold text-ink">Retrieval:</strong> Library, chapter summaries,
-            Action check-ins, Question Bank, and Progress all load your books and answers.
+            <strong className="font-semibold text-ink">Actions:</strong> recurring check-in questions
+            plus a full Question Bank (including questions found in the PDF when present).
           </li>
           <li>
-            <strong className="font-semibold text-ink">Insights:</strong> Progress builds trends from
-            scale answers, commitment follow-through, streaks, and Question Bank activity as you
-            check in over time.
+            <strong className="font-semibold text-ink">Storage:</strong> saved in your private Postgres
+            library under your Cursor identity for Progress insights over time.
           </li>
         </ul>
         {!verified && !simulated ? (
@@ -285,6 +267,8 @@ function errorMessage(code: string | undefined): string {
       return "Sign in to upload a book.";
     case "file_required":
       return "Choose a PDF file first.";
+    case "rate_limited":
+      return "Too many uploads this hour. Try again later.";
     default:
       return code
         ? `Upload failed (${code}). Try again with a PDF under 12 MB.`

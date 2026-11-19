@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chapterwise — Action check-in</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Plus+Jakarta+Sans:wght@600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F7F7F4}
+a{color:#3730A3}a:hover{color:#272079}
+textarea:focus{outline:2px solid #3730A3;outline-offset:1px}
+</style>
+</head>
+<body>
+<div style="width: 100%; min-height: 1720px; background: #F7F7F4; font-family: Inter, system-ui, sans-serif; color: #18181B">
+
+  <header style="background: #FFFFFF; border-bottom: 1px solid #E6E5E0">
+    <div style="max-width: 1200px; margin: 0 auto; padding: 16px 32px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px">
+      <div style="display: flex; align-items: center; gap: 10px">
+        <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect width="28" height="28" rx="8" fill="#3730A3"></rect><path d="M8 8h5v12H8zM15 8h5v12h-5z" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linejoin="round"></path></svg>
+        <span style="font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; font-size: 18px; letter-spacing: -0.01em">Chapterwise</span>
+      </div>
+      <nav aria-label="Main" style="display: flex; flex-wrap: wrap; gap: 4px">
+        <a href="01-library.html" style="padding: 10px 14px; border-radius: 8px; color: #52525B; font-weight: 500; font-size: 14px; text-decoration: none">Library</a>
+        <a href="03-action-checkin.html" style="padding: 10px 14px; border-radius: 8px; background: #EEF0FB; color: #3730A3; font-weight: 600; font-size: 14px; text-decoration: none">Check-ins</a>
+        <a href="04-progress-dashboard.html" style="padding: 10px 14px; border-radius: 8px; color: #52525B; font-weight: 500; font-size: 14px; text-decoration: none">Progress</a>
+      </nav>
+      <div aria-label="Account" role="img" style="width: 40px; height: 40px; border-radius: 50%; background: #18181B; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px">A</div>
+    </div>
+  </header>
+
+  <div style="max-width: 1200px; margin: 0 auto; padding: 32px 32px 80px; display: flex; flex-direction: column; gap: 28px">
+
+    <div style="display: flex; flex-direction: column; gap: 16px">
+      <a href="02-chapter-summary.html" style="font-size: 14px; color: #52525B; text-decoration: none; font-weight: 500">← Chapter 2 summary</a>
+      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 20px">
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <span style="font-size: 13px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #B45309">Action · Check-in #6</span>
+          <h1 style="margin: 0; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 40px; line-height: 1.1; letter-spacing: -0.02em; font-weight: 700">Decisions: The Pathway to Power</h1>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <span id="cad" style="font-size: 13px; font-weight: 500; color: #52525B">Repeat this check-in</span>
+          <div role="radiogroup" aria-labelledby="cad" style="display: inline-flex; padding: 4px; border-radius: 12px; background: #EDEDE8; gap: 4px">
+            <button type="button" role="radio" aria-checked="true" style="height: 40px; padding: 0 18px; border-radius: 9px; border: 0; cursor: pointer; font: 600 14px Inter, sans-serif; background: #FFFFFF; color: #18181B; box-shadow: 0 1px 2px rgba(0,0,0,0.08)">Weekly</button>
+              <button type="button" role="radio" aria-checked="false" style="height: 40px; padding: 0 18px; border-radius: 9px; border: 0; cursor: pointer; font: 500 14px Inter, sans-serif; background: transparent; color: #52525B">Monthly</button>
+              <button type="button" role="radio" aria-checked="false" style="height: 40px; padding: 0 18px; border-radius: 9px; border: 0; cursor: pointer; font: 500 14px Inter, sans-serif; background: transparent; color: #52525B">Quarterly</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start">
+
+      <form aria-label="Check-in questions" style="flex: 999 1 600px; min-width: 0; display: flex; flex-direction: column; gap: 16px">
+
+        <div style="background: #FFFFFF; border: 1px solid #E6E5E0; border-radius: 16px; padding: 18px 24px; display: flex; align-items: center; gap: 16px">
+          <span style="font-size: 14px; font-weight: 600; white-space: nowrap">4 of 5 answered</span>
+          <div style="flex: 1; height: 8px; border-radius: 4px; background: #EEEEEA; overflow: hidden"><div style="width: 80%; height: 100%; background: #3730A3; border-radius: 4px"></div></div>
+          <span style="font-size: 13px; color: #6B6B73; white-space: nowrap">Autosaved</span>
+        </div>
+
+        <fieldset style="margin: 0; border: 1px solid #E6E5E0; border-radius: 18px; background: #FFFFFF; padding: 28px; display: flex; flex-direction: column; gap: 18px">
+          <legend style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Question 1</legend>
+          <div style="display: flex; gap: 14px; align-items: flex-start">
+            <span style="font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; font-size: 14px; color: #3730A3; background: #EEF0FB; border-radius: 10px; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; flex-shrink: 0">1</span>
+            <div style="display: flex; flex-direction: column; gap: 4px">
+              <span style="font-size: 18px; font-weight: 600; line-height: 1.4">How consistently am I making decisions instead of putting them off?</span>
+              <span style="font-size: 14px; color: #6B6B73">Scale · 1 = constantly deferring, 10 = deciding quickly and clearly</span>
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 6px">
+            <button type="button" aria-pressed="false" aria-label="Score 1" style="height: 48px; border-radius: 10px; cursor: pointer; font: 600 15px Inter, sans-serif; border: 1px solid #E0DFD9; background: #FFFFFF; color: #3F3F46">1</button>
+              <button type="button" aria-pressed="false" aria-label="Score 2" style="height: 48px; border-radius: 10px; cursor: pointer; font: 600 15px Inter, sans-serif; border: 1px solid #E0DFD9; background: #FFFFFF; color: #3F3F46">2</button>
+              <button type="button" aria-pressed="false" aria-label="Score 3" style="height: 48px; border-radius: 10px; cursor: pointer; font: 600 15px Inter, sans-serif; border: 1px solid #E0DFD9; background: #FFFFFF; color: #3F3F46">3</button>
+              <button type="button" aria-pressed="false" aria-label="Score 4" style="height: 48px; border-radius: 10px; cursor: pointer; font: 600 15px Inter, sans-serif; border: 1px solid #E0DFD9; background: #FFFFFF; color: #3F3F46">4</button>
+              <button type="button" aria-pressed="false" aria-label="Score 5" style="height: 48px; border-radius: 10px; cursor: pointer; font: 600 15px Inter, sans-serif; border: 1px solid #E0DFD9; background: #FFFFFF; color: #3F3F46">5</button>
+              <button type="button" aria-pressed="false" aria-label="Score 6" style="height: 48px; border-radius: 10px; cursor: pointer; font: 600 15px Inter, sans-serif; border: 1px solid #E0DFD9; background: #FFFFFF; color: #3F3F46">6</button>
+              <button type="button" aria-pressed="true" aria-label="Score 7" style="height: 48px; border-radius: 10px; cursor: pointer; font: 600 15px Inter, sans-serif; border: 1px solid #3730A3; background: #3730A3; color: #FFFFFF">7</button>
+              <button type="button" aria-pressed="false" aria-label="Score 8" style="height: 48px; border-radius: 10px; cursor: pointer; font: 600 15px Inter, sans-serif; border: 1px solid #E0DFD9; background: #FFFFFF; color: #3F3F46">8</button>
+              <button type="button" aria-pressed="false" aria-label="Score 9" style="height: 48px; border-radius: 10px; cursor: pointer; font: 600 15px Inter, sans-serif; border: 1px solid #E0DFD9; background: #FFFFFF; color: #3F3F46">9</button>
+              <button type="button" aria-pressed="false" aria-label="Score 10" style="height: 48px; border-radius: 10px; cursor: pointer; font: 600 15px Inter, sans-serif; border: 1px solid #E0DFD9; background: #FFFFFF; color: #3F3F46">10</button>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; gap: 16px; font-size: 13px; color: #52525B"><span>Last check-in: <strong style="color: #18181B">6</strong></span><span>First check-in: <strong style="color: #18181B">4</strong></span></div>
+        </fieldset>
+
+        <div style="border: 1px solid #E6E5E0; border-radius: 18px; background: #FFFFFF; padding: 28px; display: flex; flex-direction: column; gap: 16px">
+          <div style="display: flex; gap: 14px; align-items: flex-start">
+            <span style="font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; font-size: 14px; color: #3730A3; background: #EEF0FB; border-radius: 10px; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; flex-shrink: 0">2</span>
+            <label for="q2" style="font-size: 18px; font-weight: 600; line-height: 1.4">What is one decision I've been putting off, and what is it costing me?</label>
+          </div>
+          <textarea id="q2" rows="4" placeholder="Write freely — this is just for you." style="width: 100%; box-sizing: border-box; border: 1px solid #D9D8D2; border-radius: 12px; padding: 14px 16px; font: 400 16px/1.6 Inter, sans-serif; color: #18181B; background: #FCFCFA; resize: vertical">Whether to take the team-lead role. Not deciding is keeping me stuck in two jobs at once.</textarea>
+          <div style="background: #F7F7F4; border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px">
+            <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #6B6B73">Your answer · Nov 12</span>
+            <span style="font-size: 14px; line-height: 1.55; color: #3F3F46">The team-lead role. I keep waiting for "more information".</span>
+          </div>
+        </div>
+
+        <fieldset style="margin: 0; border: 1px solid #E6E5E0; border-radius: 18px; background: #FFFFFF; padding: 28px; display: flex; flex-direction: column; gap: 18px">
+          <legend style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Question 3</legend>
+          <div style="display: flex; gap: 14px; align-items: flex-start">
+            <span style="font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; font-size: 14px; color: #3730A3; background: #EEF0FB; border-radius: 10px; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; flex-shrink: 0">3</span>
+            <div style="display: flex; flex-direction: column; gap: 4px">
+              <span style="font-size: 18px; font-weight: 600; line-height: 1.4">How deliberately did I choose what to focus on this week?</span>
+              <span style="font-size: 14px; color: #6B6B73">Scale · 1 = reacting all week, 10 = fully intentional</span>
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 6px">
+            <button type="button" aria-pressed="false" aria-label="Score 1" style="height: 48px; border-radius: 10px; cursor: pointer; font: 600 15px Inter, sans-serif; border: 1px solid #E0DFD9; background: #FFFFFF; color: #3F3F46">1</button>
+              <button type="button" aria-pressed="false" aria-label="Score 2" style="height: 48px; border-radius: 10px; cursor: pointer; font: 600 15px Inter, sans-serif; border: 1px solid #E0DFD9; background: #FFFFFF; color: #3F3F46">2</button>
+              <button type="button" aria-pressed="false" aria-label="Score 3" style="height: 48px; border-radius: 10px; cursor: pointer; font: 600 15px Inter, sans-serif; border: 1px solid #E0DFD9; background: #FFFFFF; color: #3F3F46">3</button>
+              <button type="button" aria-pressed="false" aria-label="Score 4" style="height: 48px; border-radius: 10px; cursor: pointer; font: 600 15px Inter, sans-serif; border: 1px solid #E0DFD9; background: #FFFFFF; color: #3F3F46">4</button>
+              <button type="button" aria-pressed="false" aria-label="Score 5" style="height: 48px; border-radius: 10px; cursor: pointer; font: 600 15px Inter, sans-serif; border: 1px solid #E0DFD9; background: #FFFFFF; color: #3F3F46">5</button>
+              <button type="button" aria-pressed="false" aria-label="Score 6" style="height: 48px; border-radius: 10px; cursor: pointer; font: 600 15px Inter, sans-serif; border: 1px solid #E0DFD9; background: #FFFFFF; color: #3F3F46">6</button>
+              <button type="button" aria-pressed="false" aria-label="Score 7" style="height: 48px; border-radius: 10px; cursor: pointer; font: 600 15px Inter, sans-serif; border: 1px solid #E0DFD9; background: #FFFFFF; color: #3F3F46">7</button>
+              <button type="button" aria-pressed="false" aria-label="Score 8" style="height: 48px; border-radius: 10px; cursor: pointer; font: 600 15px Inter, sans-serif; border: 1px solid #E0DFD9; background: #FFFFFF; color: #3F3F46">8</button>
+              <button type="button" aria-pressed="false" aria-label="Score 9" style="height: 48px; border-radius: 10px; cursor: pointer; font: 600 15px Inter, sans-serif; border: 1px solid #E0DFD9; background: #FFFFFF; color: #3F3F46">9</button>
+              <button type="button" aria-pressed="false" aria-label="Score 10" style="height: 48px; border-radius: 10px; cursor: pointer; font: 600 15px Inter, sans-serif; border: 1px solid #E0DFD9; background: #FFFFFF; color: #3F3F46">10</button>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; gap: 16px; font-size: 13px; color: #52525B"><span>Last check-in: <strong style="color: #18181B">5</strong></span><span>First check-in: <strong style="color: #18181B">3</strong></span></div>
+        </fieldset>
+
+        <fieldset style="margin: 0; border: 1px solid #E6E5E0; border-radius: 18px; background: #FFFFFF; padding: 28px; display: flex; flex-direction: column; gap: 18px">
+          <legend style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Question 4</legend>
+          <div style="display: flex; gap: 14px; align-items: flex-start">
+            <span style="font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; font-size: 14px; color: #3730A3; background: #EEF0FB; border-radius: 10px; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; flex-shrink: 0">4</span>
+            <div style="display: flex; flex-direction: column; gap: 6px">
+              <span style="font-size: 18px; font-weight: 600; line-height: 1.4">Did I take action within 24 hours on the decision I committed to last time?</span>
+              <span style="font-size: 14px; color: #6B6B73">Last commitment: "Ask my manager for the role description."</span>
+            </div>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; gap: 10px">
+            <button type="button" aria-pressed="true" style="height: 44px; min-width: 96px; padding: 0 20px; border-radius: 99px; cursor: pointer; font: 600 15px Inter, sans-serif; border: 1.5px solid #166534; background: #EAF6EE; color: #166534">Yes</button>
+              <button type="button" aria-pressed="false" style="height: 44px; min-width: 96px; padding: 0 20px; border-radius: 99px; cursor: pointer; font: 600 15px Inter, sans-serif; border: 1.5px solid #E0DFD9; background: #FFFFFF; color: #3F3F46">Partly</button>
+              <button type="button" aria-pressed="false" style="height: 44px; min-width: 96px; padding: 0 20px; border-radius: 99px; cursor: pointer; font: 600 15px Inter, sans-serif; border: 1.5px solid #E0DFD9; background: #FFFFFF; color: #3F3F46">No</button>
+          </div>
+        </fieldset>
+
+        <div style="border: 1px solid #E6E5E0; border-radius: 18px; background: #FFFFFF; padding: 28px; display: flex; flex-direction: column; gap: 16px">
+          <div style="display: flex; gap: 14px; align-items: flex-start">
+            <span style="font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; font-size: 14px; color: #3730A3; background: #EEF0FB; border-radius: 10px; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; flex-shrink: 0">5</span>
+            <label for="q5" style="font-size: 18px; font-weight: 600; line-height: 1.4">What decision am I committing to now, and what is my first action?</label>
+          </div>
+          <textarea id="q5" rows="3" placeholder="I've decided to… My first step, within 24 hours, is…" style="width: 100%; box-sizing: border-box; border: 1px solid #D9D8D2; border-radius: 12px; padding: 14px 16px; font: 400 16px/1.6 Inter, sans-serif; color: #18181B; background: #FCFCFA; resize: vertical"></textarea>
+          <span style="font-size: 13px; color: #52525B">This becomes the follow-up question in your next check-in.</span>
+        </div>
+
+        <div style="display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 12px; padding-top: 8px">
+          <button type="button" style="height: 48px; padding: 0 22px; border-radius: 12px; border: 1px solid #D9D8D2; background: #FFFFFF; font: 600 15px Inter, sans-serif; color: #18181B; cursor: pointer">Save draft</button>
+          <a href="04-progress-dashboard.html" style="height: 48px; padding: 0 26px; border-radius: 12px; background: #3730A3; color: #FFFFFF; font-weight: 600; font-size: 15px; text-decoration: none; display: inline-flex; align-items: center">Submit check-in</a>
+        </div>
+      </form>
+
+      <aside aria-label="Chapter progress" style="flex: 1 1 300px; min-width: 0; display: flex; flex-direction: column; gap: 16px">
+        <div style="background: #FFFFFF; border: 1px solid #E6E5E0; border-radius: 18px; padding: 24px; display: flex; flex-direction: column; gap: 14px">
+          <span style="font-size: 13px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #6B6B73">Chapter score</span>
+          <div style="display: flex; align-items: baseline; gap: 10px"><span style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 40px; font-weight: 700">6.4</span><span style="font-size: 14px; font-weight: 600; color: #166534">▲ 2.1 in 6 weeks</span></div>
+          <svg viewBox="0 0 260 80" width="100%" height="80" role="img" aria-label="Chapter score over 6 weekly check-ins: 4.3, 4.8, 5.0, 5.6, 5.9, 6.4">
+            <line x1="0" y1="79" x2="260" y2="79" stroke="#E6E5E0"></line>
+            <polyline points="10,62 58,52 106,48 154,34 202,28 250,16" fill="none" stroke="#3730A3" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"></polyline>
+            <circle cx="250" cy="16" r="4.5" fill="#3730A3"></circle>
+          </svg>
+          <div style="display: flex; justify-content: space-between; font-size: 12px; color: #6B6B73"><span>Oct 8</span><span>Today</span></div>
+        </div>
+        <div style="background: #EEF0FB; border-radius: 18px; padding: 24px; display: flex; flex-direction: column; gap: 10px">
+          <span style="font-size: 13px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #3730A3">From the chapter</span>
+          <p style="margin: 0; font-size: 15px; line-height: 1.6; color: #1E1B4B">A real decision cuts off every other option. Is there a back door you're keeping open?</p>
+        </div>
+        <div style="background: #FFFFFF; border: 1px solid #E6E5E0; border-radius: 18px; padding: 24px; display: flex; flex-direction: column; gap: 6px">
+          <span style="font-size: 13px; color: #6B6B73; font-weight: 500">Next check-in</span>
+          <span style="font-size: 17px; font-weight: 600">Thursday, Nov 26</span>
+          <span style="font-size: 13px; color: #52525B">We'll remind you that morning.</span>
+        </div>
+      </aside>
+    </div>
+  </div>
+</div>
+</body>
+</html>

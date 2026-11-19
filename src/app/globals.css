@@ -1,0 +1,82 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #f7f7f4;
+  --foreground: #18181b;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: var(--font-inter), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+a {
+  color: #3730a3;
+}
+
+a:hover {
+  color: #272079;
+}
+
+textarea:focus,
+button:focus-visible,
+select:focus-visible,
+input:focus-visible {
+  outline: 2px solid #3730a3;
+  outline-offset: 1px;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes soft-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.72;
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.45s ease-out both;
+}
+
+.animate-fade-up-delay {
+  animation: fade-up 0.55s ease-out 0.08s both;
+}
+
+.animate-fade-up-delay-2 {
+  animation: fade-up 0.6s ease-out 0.16s both;
+}
+
+.autosaved-pulse {
+  animation: soft-pulse 1.6s ease-in-out 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-up,
+  .animate-fade-up-delay,
+  .animate-fade-up-delay-2,
+  .autosaved-pulse {
+    animation: none;
+  }
+}

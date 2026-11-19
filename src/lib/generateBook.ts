@@ -18,6 +18,8 @@ export async function generateBookFromText(input: {
   filename?: string;
   titleHint?: string;
   authorHint?: string;
+  /** Opt-in: slower, needs OPENAI_API_KEY. Default is fast heuristic so PDF upload always works. */
+  useLlm?: boolean;
 }): Promise<GeneratedBookPayload> {
   const meta = inferMeta(input.text, input.filename, input.titleHint, input.authorHint);
   const raw = splitChapters(input.text).slice(0, LIMITS.maxChapters);
@@ -26,12 +28,15 @@ export async function generateBookFromText(input: {
   }
 
   const llmKey = process.env.OPENAI_API_KEY?.trim() ?? "";
-  if (llmKey) {
+  if (input.useLlm && llmKey) {
     try {
-      const chapters = await generateWithLlm(raw, llmKey);
-      return { ...meta, chapters, mode: "llm" };
+      // Cap AI chapters so large PDFs finish within request limits.
+      const aiCount = Math.min(raw.length, 8);
+      const aiChapters = await generateWithLlm(raw.slice(0, aiCount), llmKey);
+      const rest = raw.slice(aiCount).map((ch, idx) => heuristicChapter(ch, aiCount + idx));
+      return { ...meta, chapters: [...aiChapters, ...rest], mode: "llm" };
     } catch {
-      // Fall through to heuristic so uploads still succeed without a working key.
+      // Fall through to heuristic so uploads still succeed.
     }
   }
 
@@ -134,33 +139,43 @@ function inferMeta(
 
 function splitChapters(text: string): RawChapter[] {
   const normalized = text.replace(/\r/g, "\n");
-  const patterns: RegExp[] = [
-    /(?:^|\n)\s*(chapter\s+(\d+|[IVXLC]+)\s*[:.\-–—]?\s*([^\n]{0,120}))/gi,
-    /(?:^|\n)\s*((\d{1,2})\s*\n\s*([A-Z][^\n]{2,80}))/g,
-  ];
+  type Hit = { index: number; number: number; title: string; style: string };
 
-  type Hit = { index: number; number: number; title: string };
-  const hits: Hit[] = [];
+  const candidates: Hit[] = [
+    ...collectHits(
+      normalized,
+      // Strong body marker used by many print PDFs: number alone, then title line.
+      /(?:^|\n)\s*(\d{1,2})\s*\n\s*([A-Z][^\n]{2,100})/g,
+      (m) => ({
+        index: m.index + (m[0].startsWith("\n") ? 1 : 0),
+        number: romanOrInt(m[1]),
+        title: cleanTitle(m[2]),
+        style: "numbered-block",
+      }),
+    ),
+    ...collectHits(
+      normalized,
+      /(?:^|\n)\s*chapter\s+(\d+|[IVXLC]+)\s*[:.\-–—]?\s*([^\n]{0,120})/gi,
+      (m) => ({
+        index: m.index + (m[0].startsWith("\n") ? 1 : 0),
+        number: romanOrInt(m[1]),
+        title: cleanTitle(m[2] || `Chapter ${m[1]}`),
+        style: "chapter-word",
+      }),
+    ),
+    ...collectHits(
+      normalized,
+      /(?:^|\n)\s*(\d{1,2})[.)]\s+([A-Z][^\n]{2,100})/g,
+      (m) => ({
+        index: m.index + (m[0].startsWith("\n") ? 1 : 0),
+        number: romanOrInt(m[1]),
+        title: cleanTitle(m[2]),
+        style: "dotted",
+      }),
+    ),
+  ].filter((h) => h.number >= 1 && h.number <= 60 && h.title.length >= 3);
 
-  for (const pattern of patterns) {
-    pattern.lastIndex = 0;
-    let match: RegExpExecArray | null;
-    while ((match = pattern.exec(normalized))) {
-      const full = match[1] ?? match[0];
-      const numRaw = match[2] ?? String(hits.length + 1);
-      const titleRaw = (match[3] ?? full).replace(/^chapter\s+\S+\s*[:.\-–—]?\s*/i, "").trim();
-      const number = romanOrInt(numRaw);
-      if (!number || number > 80) continue;
-      hits.push({
-        index: match.index + (match[0].startsWith("\n") ? 1 : 0),
-        number,
-        title: cleanTitle(titleRaw || `Chapter ${number}`),
-      });
-    }
-    if (hits.length >= 2) break;
-  }
-
-  const unique = dedupeHits(hits).slice(0, LIMITS.maxChapters);
+  const unique = pickChapterSequence(candidates).slice(0, LIMITS.maxChapters);
   if (unique.length >= 2) {
     return unique.map((hit, i) => {
       const end = i + 1 < unique.length ? unique[i + 1].index : normalized.length;
@@ -180,6 +195,84 @@ function splitChapters(text: string): RawChapter[] {
     title: `Section ${i + 1}`,
     body,
   }));
+}
+
+function collectHits<T extends { index: number; number: number; title: string }>(
+  text: string,
+  pattern: RegExp,
+  map: (m: RegExpExecArray) => T,
+): T[] {
+  const hits: T[] = [];
+  pattern.lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(text))) {
+    const hit = map(match);
+    if (!hit.number || hit.number > 80) continue;
+    if (!hit.title || hit.title.length < 2) continue;
+    hits.push(hit);
+  }
+  return hits;
+}
+
+/**
+ * Build an ascending chapter sequence starting at 1.
+ * Prefer body-style markers and later occurrences (skip TOC), with a minimum gap.
+ */
+function pickChapterSequence(
+  hits: { index: number; number: number; title: string; style: string }[],
+) {
+  const styleRank: Record<string, number> = {
+    "numbered-block": 3,
+    "chapter-word": 2,
+    dotted: 1,
+  };
+  const byNum = new Map<number, typeof hits>();
+  for (const hit of hits) {
+    const list = byNum.get(hit.number) ?? [];
+    list.push(hit);
+    byNum.set(hit.number, list);
+  }
+
+  const chosen: typeof hits = [];
+  let minIndex = 0;
+  for (let n = 1; n <= 60; n++) {
+    const options = (byNum.get(n) ?? [])
+      .filter((h) => h.index >= minIndex)
+      .sort((a, b) => {
+        const rank = (styleRank[b.style] ?? 0) - (styleRank[a.style] ?? 0);
+        if (rank !== 0) return rank;
+        // Prefer later start so TOC (earlier) loses to body.
+        return b.index - a.index;
+      });
+    // If many early dotted TOC hits exist, prefer the latest strong style.
+    const pick =
+      options.find((h) => h.style !== "dotted") ??
+      options[0];
+    if (!pick) break;
+    // Skip tiny gaps that are usually false positives inside a chapter.
+    if (chosen.length > 0 && pick.index - chosen[chosen.length - 1].index < 400) {
+      continue;
+    }
+    chosen.push(pick);
+    minIndex = pick.index + 400;
+  }
+
+  // If we failed to start at 1, fall back to the densest ascending run.
+  if (chosen.length >= 2 && chosen[0].number === 1) return chosen;
+
+  const sorted = [...hits].sort((a, b) => a.index - b.index);
+  const run: typeof hits = [];
+  for (const hit of sorted) {
+    if (run.length === 0) {
+      run.push(hit);
+      continue;
+    }
+    const prev = run[run.length - 1];
+    if (hit.number === prev.number + 1 && hit.index - prev.index >= 400) {
+      run.push(hit);
+    }
+  }
+  return run.length >= chosen.length ? run : chosen;
 }
 
 function heuristicChapter(raw: RawChapter, idx: number): Chapter {
@@ -574,19 +667,6 @@ function romanOrInt(raw: string): number {
 
 function cleanTitle(title: string): string {
   return title.replace(/\s+/g, " ").replace(/OceanofPDF.*/i, "").trim() || "Untitled chapter";
-}
-
-function dedupeHits(
-  hits: { index: number; number: number; title: string }[],
-) {
-  const sorted = [...hits].sort((a, b) => a.index - b.index);
-  const out: typeof sorted = [];
-  for (const hit of sorted) {
-    const prev = out[out.length - 1];
-    if (prev && hit.index - prev.index < 80) continue;
-    out.push(hit);
-  }
-  return out;
 }
 
 function slugify(value: string): string {

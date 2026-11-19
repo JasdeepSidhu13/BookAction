@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 type Props = {
   viewerName: string;
@@ -12,9 +12,12 @@ type Props = {
 
 export function UploadBookClient({ viewerName, simulated, verified }: Props) {
   const router = useRouter();
+  const inputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
   const [author, setAuthor] = useState("");
+  const [useLlm, setUseLlm] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
   const [status, setStatus] = useState<string>("");
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<{
@@ -25,32 +28,69 @@ export function UploadBookClient({ viewerName, simulated, verified }: Props) {
     firstChapterId?: string;
   } | null>(null);
 
+  function pickFile(next: File | null | undefined) {
+    if (!next) return;
+    const name = next.name.toLowerCase();
+    const type = (next.type || "").toLowerCase();
+    const ok =
+      name.endsWith(".pdf") ||
+      name.endsWith(".txt") ||
+      name.endsWith(".md") ||
+      type === "application/pdf" ||
+      type.startsWith("text/");
+    if (!ok) {
+      setStatus("Please choose a PDF or plain text (.txt) file.");
+      setFile(null);
+      return;
+    }
+    setFile(next);
+    setStatus(`Selected: ${next.name} (${formatBytes(next.size)})`);
+    setResult(null);
+  }
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!file) {
-      setStatus("Choose a PDF or text file first.");
+      setStatus("Choose a PDF first, then click Generate.");
+      inputRef.current?.click();
       return;
     }
     setBusy(true);
-    setStatus("Extracting chapters and generating summaries…");
+    setStatus(
+      useLlm
+        ? "Reading PDF and generating AI summaries (this can take a minute)…"
+        : "Reading PDF and building chapter summaries…",
+    );
     setResult(null);
     try {
       const body = new FormData();
       body.set("file", file);
       if (title.trim()) body.set("title", title.trim());
       if (author.trim()) body.set("author", author.trim());
+      if (useLlm) body.set("useLlm", "true");
       const res = await fetch("/api/books/upload", { method: "POST", body });
-      const data = await res.json();
-      if (!res.ok) {
-        setStatus(errorMessage(data.error));
+      let data: { error?: string; detail?: string; book?: {
+        id: string;
+        title: string;
+        chapterCount: number;
+        generationMode: string;
+        firstChapterId?: string;
+      } } = {};
+      try {
+        data = await res.json();
+      } catch {
+        setStatus("Upload failed — the server returned an unexpected response.");
+        setBusy(false);
+        return;
+      }
+      if (!res.ok || !data.book) {
+        setStatus(errorMessage(data.error || data.detail));
         setBusy(false);
         return;
       }
       setResult(data.book);
       setStatus(
-        data.book.generationMode === "llm"
-          ? "Generated with your OpenAI key."
-          : "Generated with the built-in extractor (add OPENAI_API_KEY for richer summaries).",
+        `Ready: ${data.book.chapterCount} chapters from your PDF (${data.book.generationMode} mode).`,
       );
       setBusy(false);
       if (data.book.firstChapterId) {
@@ -58,7 +98,7 @@ export function UploadBookClient({ viewerName, simulated, verified }: Props) {
         router.refresh();
       }
     } catch {
-      setStatus("Upload failed. Try a smaller PDF or a .txt export.");
+      setStatus("Upload failed. Try a smaller PDF, or export the book as .txt.");
       setBusy(false);
     }
   }
@@ -70,12 +110,11 @@ export function UploadBookClient({ viewerName, simulated, verified }: Props) {
           Add a book
         </p>
         <h1 className="m-0 font-display text-4xl font-bold tracking-tight">
-          Upload & generate
+          Upload a PDF
         </h1>
         <p className="m-0 text-[15px] leading-[1.6] text-soft">
-          Upload a PDF or text file. Chapterwise extracts chapters, builds summaries, and creates
-          Action + Question Bank prompts — saved privately to your Postgres library as{" "}
-          {viewerName}.
+          Choose a PDF from your computer. Chapterwise extracts the chapters, builds summaries, and
+          creates Action + Question Bank prompts — saved privately for {viewerName}.
         </p>
       </div>
 
@@ -83,20 +122,64 @@ export function UploadBookClient({ viewerName, simulated, verified }: Props) {
         onSubmit={onSubmit}
         className="flex flex-col gap-5 rounded-card border border-line bg-white p-6 sm:p-8"
       >
-        <label className="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-[16px] border-[1.5px] border-dashed border-[#C9C8C1] bg-canvas px-6 py-10 text-center">
-          <input
-            type="file"
-            accept=".pdf,.txt,.md,application/pdf,text/plain,text/markdown"
-            className="sr-only"
-            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-          />
+        <input
+          ref={inputRef}
+          type="file"
+          accept="application/pdf,.pdf,text/plain,.txt,.md"
+          className="sr-only"
+          onChange={(e) => pickFile(e.target.files?.[0])}
+        />
+
+        <div
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              inputRef.current?.click();
+            }
+          }}
+          onClick={() => inputRef.current?.click()}
+          onDragEnter={(e) => {
+            e.preventDefault();
+            setDragOver(true);
+          }}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragOver(true);
+          }}
+          onDragLeave={(e) => {
+            e.preventDefault();
+            setDragOver(false);
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragOver(false);
+            pickFile(e.dataTransfer.files?.[0]);
+          }}
+          className={`flex flex-col items-center justify-center gap-3 rounded-[16px] border-[1.5px] border-dashed px-6 py-10 text-center ${
+            dragOver
+              ? "border-brand bg-brand-soft"
+              : "border-[#C9C8C1] bg-canvas"
+          }`}
+        >
           <span className="font-display text-lg font-bold">
-            {file ? file.name : "Drop a PDF or .txt here"}
+            {file ? file.name : "Drop a PDF here, or choose one"}
           </span>
           <span className="text-sm text-muted">
-            Max 12 MB · chapters are detected automatically
+            PDF preferred · also accepts .txt · max 12 MB
           </span>
-        </label>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              inputRef.current?.click();
+            }}
+            className="mt-1 inline-flex h-11 items-center rounded-chip bg-ink px-5 text-sm font-semibold text-white"
+          >
+            Choose PDF…
+          </button>
+        </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <label className="flex flex-col gap-1.5 text-[13px] font-medium text-muted">
@@ -105,7 +188,7 @@ export function UploadBookClient({ viewerName, simulated, verified }: Props) {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               className="h-11 rounded-chip border border-line2 bg-white px-4 text-sm text-ink"
-              placeholder="Detected from the file if blank"
+              placeholder="Detected from the PDF if blank"
             />
           </label>
           <label className="flex flex-col gap-1.5 text-[13px] font-medium text-muted">
@@ -119,12 +202,25 @@ export function UploadBookClient({ viewerName, simulated, verified }: Props) {
           </label>
         </div>
 
+        <label className="flex items-start gap-3 text-sm text-soft">
+          <input
+            type="checkbox"
+            checked={useLlm}
+            onChange={(e) => setUseLlm(e.target.checked)}
+            className="mt-1"
+          />
+          <span>
+            Enhance with AI (slower; uses your OpenAI key). Leave off for a fast, reliable PDF
+            import.
+          </span>
+        </label>
+
         <button
           type="submit"
           disabled={busy || !file}
           className="inline-flex h-12 items-center justify-center rounded-chip bg-brand px-5 text-sm font-semibold text-white disabled:opacity-60"
         >
-          {busy ? "Generating…" : "Generate summaries & questions"}
+          {busy ? "Uploading & generating…" : "Upload PDF & generate"}
         </button>
 
         {status ? <p className="m-0 text-sm text-soft">{status}</p> : null}
@@ -146,24 +242,22 @@ export function UploadBookClient({ viewerName, simulated, verified }: Props) {
         <ul className="m-0 flex list-disc flex-col gap-2 pl-5 text-[15px] leading-[1.55] text-soft">
           <li>
             <strong className="font-semibold text-ink">Storage:</strong> your app’s private Postgres
-            database (check-ins, answers, commitments, question-bank history, and uploaded book
-            chapters). Catalog books ship in the app; uploads are per signed-in user.
+            database (uploaded chapters, check-ins, answers, commitments, Question Bank history),
+            keyed to your signed-in Cursor identity.
           </li>
           <li>
-            <strong className="font-semibold text-ink">Retrieval:</strong> Library, Check-ins,
-            Question Bank, and Progress all read by your Cursor identity. Uploaded books appear
-            beside catalog titles and support the same chapter → Action → Question Bank flow.
+            <strong className="font-semibold text-ink">Retrieval:</strong> Library, chapter summaries,
+            Action check-ins, Question Bank, and Progress all load your books and answers.
           </li>
           <li>
-            <strong className="font-semibold text-ink">Insights:</strong> Progress aggregates scale
-            trends, follow-through on commitments, streaks, chapter activity, and Question Bank
-            answer volume as data accumulates — so summaries stay useful even after many check-ins.
+            <strong className="font-semibold text-ink">Insights:</strong> Progress builds trends from
+            scale answers, commitment follow-through, streaks, and Question Bank activity as you
+            check in over time.
           </li>
         </ul>
         {!verified && !simulated ? (
           <p className="m-0 text-sm text-amber-ink">
-            Sign in on the published app so uploads stay tied to your account instead of a shared
-            local guest.
+            Sign in on the published app so uploads stay tied to your account.
           </p>
         ) : null}
       </section>
@@ -171,19 +265,29 @@ export function UploadBookClient({ viewerName, simulated, verified }: Props) {
   );
 }
 
+function formatBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(0)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 function errorMessage(code: string | undefined): string {
   switch (code) {
     case "file_too_large":
       return "File is too large (max 12 MB).";
     case "unsupported_type":
-      return "Use a PDF or plain text file.";
+      return "Please upload a PDF (or .txt) file.";
     case "empty_text":
-      return "Couldn’t extract text from that file.";
+      return "Couldn’t extract text from that PDF. Try another export or a .txt file.";
     case "no_chapters_found":
-      return "No readable chapters found. Try a text export.";
+      return "No readable chapters found in that file.";
     case "person_required":
       return "Sign in to upload a book.";
+    case "file_required":
+      return "Choose a PDF file first.";
     default:
-      return "Upload failed. Please try again.";
+      return code
+        ? `Upload failed (${code}). Try again with a PDF under 12 MB.`
+        : "Upload failed. Please try again with a PDF.";
   }
 }

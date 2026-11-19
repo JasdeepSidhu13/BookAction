@@ -46,14 +46,19 @@ export async function POST(request: Request) {
 
   const titleHint = clampText(String(form.get("title") ?? ""), LIMITS.bookTitle);
   const authorHint = clampText(String(form.get("author") ?? ""), LIMITS.bookAuthor);
+  const useLlm =
+    String(form.get("useLlm") ?? "").toLowerCase() === "true" ||
+    String(form.get("useLlm") ?? "") === "1" ||
+    String(form.get("useLlm") ?? "") === "on";
 
   try {
-    const { text } = await extractTextFromUpload(file);
+    const { text, kind } = await extractTextFromUpload(file);
     const generated = await generateBookFromText({
       text,
       filename: file.name,
       titleHint: titleHint || undefined,
       authorHint: authorHint || undefined,
+      useLlm,
     });
 
     const base = slugify(generated.title) || "uploaded-book";
@@ -74,6 +79,7 @@ export async function POST(request: Request) {
           author: generated.author,
           chapterCount: generated.chapters.length,
           generationMode: generated.mode,
+          sourceKind: kind,
           firstChapterId: generated.chapters[0]?.id,
         },
       },
@@ -81,6 +87,7 @@ export async function POST(request: Request) {
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : "upload_failed";
+    console.error("book_upload_failed", message, error);
     const status =
       message === "file_too_large"
         ? 413
@@ -89,6 +96,9 @@ export async function POST(request: Request) {
             message === "no_chapters_found"
           ? 400
           : 500;
-    return NextResponse.json({ error: message }, { status });
+    return NextResponse.json(
+      { error: message, detail: message },
+      { status },
+    );
   }
 }

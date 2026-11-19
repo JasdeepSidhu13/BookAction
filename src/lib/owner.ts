@@ -2,17 +2,14 @@
  * Who gets the built-in starter library (Awaken + Confidence Gap).
  * Everyone else starts with an empty library and only their uploads.
  *
- * Override with CHAPTERWISE_OWNER_EMAIL / CHAPTERWISE_OWNER_USER_ID if needed.
+ * Set CHAPTERWISE_OWNER_EMAIL and/or CHAPTERWISE_OWNER_USER_ID as app secrets
+ * (no hardcoded personal identifiers in source).
  */
-const OWNER_EMAIL = (
-  process.env.CHAPTERWISE_OWNER_EMAIL ?? "jasdeepsidhu13@gmail.com"
-)
+const OWNER_EMAIL = (process.env.CHAPTERWISE_OWNER_EMAIL ?? "")
   .trim()
   .toLowerCase();
 
-const OWNER_USER_ID = Number(
-  process.env.CHAPTERWISE_OWNER_USER_ID ?? "370716115",
-);
+const OWNER_USER_ID = Number(process.env.CHAPTERWISE_OWNER_USER_ID ?? "");
 
 export type OwnerCheck = {
   kind?: string;

@@ -1,4 +1,4 @@
-import { getChapter, getDefaultBook } from "@/content/books";
+import { books, getChapter } from "@/content/books";
 import { sql } from "@/lib/db";
 import type {
   AnswerMap,
@@ -285,7 +285,6 @@ export function answeredCount(questions: Question[], answers: AnswerMap): number
 }
 
 export async function getDueCheckIns(ownerSub: string) {
-  const book = getDefaultBook();
   const settings = await sql<{
     book_id: string;
     chapter_id: string;
@@ -298,41 +297,43 @@ export async function getDueCheckIns(ownerSub: string) {
   const byKey = new Map(settings.map((s) => [`${s.book_id}:${s.chapter_id}`, s]));
 
   const items = [];
-  for (const chapter of book.chapters) {
-    const key = `${book.id}:${chapter.id}`;
-    const setting = byKey.get(key) ?? { cadence: "weekly" as Cadence, status: "not_started" };
-    const latestSubmitted = await sql<CheckInRow>(
-      `select * from check_ins
-       where owner_sub = $1 and book_id = $2 and chapter_id = $3 and status = 'submitted'
-       order by submitted_at desc limit 1`,
-      [ownerSub, book.id, chapter.id],
-    );
-    const last = latestSubmitted[0];
-    let dueDate: Date;
-    if (!last?.submitted_at) {
-      dueDate = new Date();
-      if (chapter.number > 2) {
-        dueDate.setDate(dueDate.getDate() + (chapter.number - 2) * 7);
+  for (const book of books) {
+    for (const chapter of book.chapters) {
+      const key = `${book.id}:${chapter.id}`;
+      const setting = byKey.get(key) ?? { cadence: "weekly" as Cadence, status: "not_started" };
+      const latestSubmitted = await sql<CheckInRow>(
+        `select * from check_ins
+         where owner_sub = $1 and book_id = $2 and chapter_id = $3 and status = 'submitted'
+         order by submitted_at desc limit 1`,
+        [ownerSub, book.id, chapter.id],
+      );
+      const last = latestSubmitted[0];
+      let dueDate: Date;
+      if (!last?.submitted_at) {
+        dueDate = new Date();
+        if (chapter.number > 2) {
+          dueDate.setDate(dueDate.getDate() + (chapter.number - 2) * 7);
+        }
+      } else {
+        dueDate = new Date(last.submitted_at);
+        dueDate.setDate(dueDate.getDate() + cadenceDays(setting.cadence));
       }
-    } else {
-      dueDate = new Date(last.submitted_at);
-      dueDate.setDate(dueDate.getDate() + cadenceDays(setting.cadence));
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const due = new Date(dueDate);
+      due.setHours(0, 0, 0, 0);
+      const diffDays = Math.round((due.getTime() - today.getTime()) / 86400000);
+      items.push({
+        bookId: book.id,
+        chapterId: chapter.id,
+        chapterNumber: chapter.number,
+        title: chapter.shortTitle,
+        cadence: setting.cadence,
+        dueDate: due.toISOString(),
+        diffDays,
+        urgency: diffDays <= 0 ? "due" : diffDays === 1 ? "soon" : "later",
+      });
     }
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const due = new Date(dueDate);
-    due.setHours(0, 0, 0, 0);
-    const diffDays = Math.round((due.getTime() - today.getTime()) / 86400000);
-    items.push({
-      bookId: book.id,
-      chapterId: chapter.id,
-      chapterNumber: chapter.number,
-      title: chapter.shortTitle,
-      cadence: setting.cadence,
-      dueDate: due.toISOString(),
-      diffDays,
-      urgency: diffDays <= 0 ? "due" : diffDays === 1 ? "soon" : "later",
-    });
   }
   return items.sort((a, b) => a.diffDays - b.diffDays);
 }

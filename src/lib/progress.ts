@@ -278,13 +278,17 @@ function buildInsights(input: {
     commitmentId?: number;
   }[] = [];
 
+  const insightBook = books.find((b) => b.id === input.bookId) ?? getDefaultBook();
+  const chapterIdByNumber = (num: number) =>
+    insightBook.chapters.find((c) => c.number === num)?.id ?? insightBook.chapters[0]?.id ?? "";
+
   const best = input.questionChanges.find((q) => q.change >= 2);
   if (best) {
     insights.push({
       kind: "progress",
       title: "You are improving where it counts",
       body: `"${best.label}" rose from ${best.first} → ${best.latest} across your check-ins.`,
-      href: `/books/${input.bookId}/chapters/${getDefaultBook().chapters.find((c) => c.number === best.chapterNumber)?.id ?? ""}/action`,
+      href: `/books/${input.bookId}/chapters/${chapterIdByNumber(best.chapterNumber)}/action`,
       cta: "See your answers →",
     });
   } else if (input.growthDelta != null && input.growthDelta > 0) {
@@ -352,7 +356,7 @@ function buildInsights(input: {
       kind: "progress",
       title: "Start your first check-in",
       body: "Answer a chapter's action questions to unlock growth trends and insights.",
-      href: `/books/${input.bookId}/chapters/${getDefaultBook().chapters[1]?.id ?? getDefaultBook().chapters[0].id}/action`,
+      href: `/books/${input.bookId}/chapters/${insightBook.chapters[1]?.id ?? insightBook.chapters[0].id}/action`,
       cta: "Open Action →",
     });
   }

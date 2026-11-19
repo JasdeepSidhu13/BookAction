@@ -24,7 +24,8 @@ export default async function ActionCheckInPage({
 }) {
   const { bookId, chapterId } = await params;
   const viewer = await getViewer();
-  const data = await resolveChapter(viewer.sub, bookId, chapterId);
+  if (!viewer.verified) notFound();
+  const data = await resolveChapter(viewer.library, bookId, chapterId);
   if (!data) notFound();
   const { book, chapter } = data;
 
@@ -33,12 +34,12 @@ export default async function ActionCheckInPage({
   const answers = await getAnswersMap(draft.id);
   const previous = await getPreviousSubmittedAnswers(viewer.sub, bookId, chapterId, draft.id);
   const first = await getFirstSubmittedAnswers(viewer.sub, bookId, chapterId);
-  const progress = await computeProgress(viewer.sub, bookId);
-  const chapterStat = progress.chapterStats.find((c) => c.chapterId === chapterId);
+  const progress = await computeProgress(viewer.library, bookId);
+  const chapterStat = progress?.chapterStats.find((c) => c.chapterId === chapterId);
   const chapterSpark =
     chapterStat?.latest != null && chapterStat.first != null
       ? [chapterStat.first, chapterStat.latest]
-      : progress.growthPoints.map((p) => p.score);
+      : (progress?.growthPoints.map((p) => p.score) ?? []);
 
   const commitments = await listOpenCommitments(viewer.sub);
   const lastCommitment =
@@ -71,7 +72,12 @@ export default async function ActionCheckInPage({
 
   return (
     <div className="min-h-screen bg-canvas text-ink">
-      <AppHeader active="checkins" initial={viewer.initial} />
+      <AppHeader
+        active="checkins"
+        initial={viewer.initial}
+        signedIn
+        viewerName={viewer.name}
+      />
       <div className="mx-auto flex max-w-[1200px] flex-col gap-7 px-4 py-8 sm:px-8 sm:pb-20">
         <div className="flex flex-col gap-4">
           <Link

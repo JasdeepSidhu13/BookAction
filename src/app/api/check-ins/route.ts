@@ -5,7 +5,7 @@ import {
   setCadence,
   submitCheckIn,
 } from "@/lib/checkins";
-import { isAccessibleBookChapter } from "@/lib/library";
+import { accessFromPerson, isAccessibleBookChapter } from "@/lib/library";
 import type { AnswerMap, Cadence } from "@/lib/types";
 import { requireIdentity } from "../../../../cursor/identity";
 
@@ -18,6 +18,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "person_required" }, { status: 403 });
   }
 
+  const access = accessFromPerson(identity);
   const body = (await request.json()) as {
     checkInId?: number;
     bookId: string;
@@ -27,7 +28,7 @@ export async function POST(request: Request) {
     mode: "draft" | "submit";
   };
 
-  if (!(await isAccessibleBookChapter(identity.sub, body.bookId, body.chapterId))) {
+  if (!(await isAccessibleBookChapter(access, body.bookId, body.chapterId))) {
     return NextResponse.json({ error: "unknown_chapter" }, { status: 400 });
   }
 
@@ -43,7 +44,7 @@ export async function POST(request: Request) {
   await saveAnswers(identity.sub, draft.id, body.answers ?? {});
 
   if (body.mode === "submit") {
-    const submitted = await submitCheckIn(identity.sub, draft.id);
+    const submitted = await submitCheckIn(access, draft.id);
     return NextResponse.json(
       { checkIn: submitted },
       { headers: { "cache-control": "private, no-store" } },
@@ -63,12 +64,13 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "person_required" }, { status: 403 });
   }
 
+  const access = accessFromPerson(identity);
   const body = (await request.json()) as {
     bookId: string;
     chapterId: string;
     cadence: Cadence;
   };
-  if (!(await isAccessibleBookChapter(identity.sub, body.bookId, body.chapterId))) {
+  if (!(await isAccessibleBookChapter(access, body.bookId, body.chapterId))) {
     return NextResponse.json({ error: "unknown_chapter" }, { status: 400 });
   }
   await setCadence(identity.sub, body.bookId, body.chapterId, body.cadence);

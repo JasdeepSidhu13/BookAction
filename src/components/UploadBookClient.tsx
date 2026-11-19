@@ -239,7 +239,8 @@ export function UploadBookClient({ viewerName, simulated, verified }: Props) {
         </ul>
         {!verified && !simulated ? (
           <p className="m-0 text-sm text-amber-ink">
-            Sign in on the published app so uploads stay tied to your account.
+            Publish Chapterwise as Private or Team, then reopen it while signed into
+            Cursor so uploads stay tied to your account.
           </p>
         ) : null}
       </section>

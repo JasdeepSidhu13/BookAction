@@ -298,7 +298,7 @@ export async function getDueCheckIns(ownerSub: string) {
   const byKey = new Map(settings.map((s) => [`${s.book_id}:${s.chapter_id}`, s]));
 
   const items = [];
-  for (const chapter of book.chapters.slice(0, 5)) {
+  for (const chapter of book.chapters) {
     const key = `${book.id}:${chapter.id}`;
     const setting = byKey.get(key) ?? { cadence: "weekly" as Cadence, status: "not_started" };
     const latestSubmitted = await sql<CheckInRow>(

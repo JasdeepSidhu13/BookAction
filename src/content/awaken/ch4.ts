@@ -1,6 +1,6 @@
 import type { Chapter } from "@/lib/types";
 
-export const ch4: Chapter = {
+export const ch4: Omit<Chapter, "bankQuestions"> = {
   id: "ch-4-belief-systems",
   number: 4,
   title: "Belief Systems: The Power to Create and Destroy",

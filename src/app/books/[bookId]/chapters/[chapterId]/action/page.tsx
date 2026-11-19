@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
 import { CheckInForm } from "@/components/CheckInForm";
-import { getChapter } from "@/content/books";
 import {
   cadenceDays,
   ensureDraftCheckIn,
@@ -12,6 +11,7 @@ import {
   getPreviousSubmittedAnswers,
   listOpenCommitments,
 } from "@/lib/checkins";
+import { resolveChapter } from "@/lib/library";
 import { computeProgress } from "@/lib/progress";
 import { getViewer } from "@/lib/viewer";
 
@@ -23,10 +23,10 @@ export default async function ActionCheckInPage({
   params: Promise<{ bookId: string; chapterId: string }>;
 }) {
   const { bookId, chapterId } = await params;
-  const data = getChapter(bookId, chapterId);
+  const viewer = await getViewer();
+  const data = await resolveChapter(viewer.sub, bookId, chapterId);
   if (!data) notFound();
   const { book, chapter } = data;
-  const viewer = await getViewer();
 
   const draft = await ensureDraftCheckIn(viewer.sub, bookId, chapterId);
   const settings = await getOrCreateSettings(viewer.sub, bookId, chapterId);

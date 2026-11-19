@@ -56,12 +56,12 @@ export function AppHeader({
 
         <div className="flex items-center gap-3">
           {showAddBook ? (
-            <button
-              type="button"
-              className="h-11 rounded-chip border border-line bg-white px-4 text-sm font-medium text-ink"
+            <Link
+              href="/upload"
+              className="inline-flex h-11 items-center rounded-chip border border-line bg-white px-4 text-sm font-medium text-ink no-underline"
             >
               + Add book
-            </button>
+            </Link>
           ) : null}
           <div
             aria-label="Account"

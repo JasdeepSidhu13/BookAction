@@ -25,7 +25,7 @@ export default async function CheckInsPage() {
           <h2 className="m-0 font-display text-xl font-bold">Upcoming</h2>
           {due.map((item) => (
             <Link
-              key={item.chapterId}
+              key={`${item.bookId}:${item.chapterId}`}
               href={`/books/${item.bookId}/chapters/${item.chapterId}/action`}
               className="flex items-center justify-between gap-4 rounded-panel border border-line bg-white p-5 text-ink no-underline"
             >

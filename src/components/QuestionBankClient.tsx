@@ -16,6 +16,7 @@ type ChapterOption = {
 type Props = {
   bookId: string;
   bookTitle: string;
+  books: { id: string; title: string }[];
   chapters: ChapterOption[];
   selectedChapterId: string;
   catalog: BankQuestion[];
@@ -59,6 +60,12 @@ export function QuestionBankClient(props: Props) {
   });
 
   const answeredCount = props.catalog.filter((q) => props.latestByKey[q.id]?.answerText).length;
+
+  function selectBook(bookId: string) {
+    startTransition(() => {
+      router.push(`/question-bank?book=${bookId}`);
+    });
+  }
 
   function selectChapter(chapterId: string) {
     startTransition(() => {
@@ -149,6 +156,23 @@ export function QuestionBankClient(props: Props) {
 
       <div className="flex flex-wrap gap-6 items-start">
         <aside className="flex min-w-0 flex-[1_1_260px] max-w-[320px] flex-col gap-3 rounded-card border border-line bg-white p-5">
+          {props.books.length > 1 ? (
+            <label className="flex flex-col gap-1.5 text-[13px] font-medium text-muted">
+              Book
+              <select
+                value={props.bookId}
+                disabled={pending}
+                onChange={(e) => selectBook(e.target.value)}
+                className="h-11 rounded-chip border border-line2 bg-white px-3 text-sm font-semibold text-ink"
+              >
+                {props.books.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.title}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
           <h2 className="m-0 font-display text-lg font-bold">Chapters</h2>
           {props.chapters.map((ch) => {
             const active = ch.id === props.selectedChapterId;

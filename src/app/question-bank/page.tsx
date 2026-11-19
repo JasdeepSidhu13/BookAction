@@ -48,6 +48,7 @@ export default async function QuestionBankPage({
       <QuestionBankClient
         bookId={book.id}
         bookTitle={book.title}
+        books={books.map((b) => ({ id: b.id, title: b.title }))}
         chapters={book.chapters.map((c) => ({
           id: c.id,
           number: c.number,
@@ -62,8 +63,6 @@ export default async function QuestionBankPage({
         history={history}
         insights={insights}
       />
-      {/* Keep books import used for future multi-book select */}
-      <span className="sr-only">{books.length} books</span>
     </div>
   );
 }

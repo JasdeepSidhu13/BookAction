@@ -1,26 +1,26 @@
 import { NextResponse } from "next/server";
 import { extractTextFromUpload } from "@/lib/extractText";
-import { generateBookFromText, persistGeneratedBook } from "@/lib/generateBook";
+import {
+  generateBookFromText,
+  newUserBookId,
+  persistGeneratedBook,
+} from "@/lib/generateBook";
 import { LIMITS, clampText } from "@/lib/limits";
+import { allowRequest } from "@/lib/rateLimit";
 import { requireIdentity } from "../../../../../cursor/identity";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
-
-function slugify(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/['’]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 48);
-}
 
 export async function POST(request: Request) {
   const identity = await requireIdentity(request);
   if (identity instanceof Response) return identity;
   if (identity.kind === "key") {
     return NextResponse.json({ error: "person_required" }, { status: 403 });
+  }
+
+  if (!allowRequest(`upload:${identity.sub}`, LIMITS.uploadsPerHour, 60 * 60 * 1000)) {
+    return NextResponse.json({ error: "rate_limited" }, { status: 429 });
   }
 
   let form: FormData;
@@ -46,10 +46,6 @@ export async function POST(request: Request) {
 
   const titleHint = clampText(String(form.get("title") ?? ""), LIMITS.bookTitle);
   const authorHint = clampText(String(form.get("author") ?? ""), LIMITS.bookAuthor);
-  const useLlm =
-    String(form.get("useLlm") ?? "").toLowerCase() === "true" ||
-    String(form.get("useLlm") ?? "") === "1" ||
-    String(form.get("useLlm") ?? "") === "on";
 
   try {
     const { text, kind } = await extractTextFromUpload(file);
@@ -58,11 +54,9 @@ export async function POST(request: Request) {
       filename: file.name,
       titleHint: titleHint || undefined,
       authorHint: authorHint || undefined,
-      useLlm,
     });
 
-    const base = slugify(generated.title) || "uploaded-book";
-    const bookId = `user-${base}-${Date.now().toString(36)}`;
+    const bookId = newUserBookId(identity.sub, generated.title);
     await persistGeneratedBook({
       ownerSub: identity.sub,
       bookId,
@@ -87,18 +81,16 @@ export async function POST(request: Request) {
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : "upload_failed";
-    console.error("book_upload_failed", message, error);
+    console.error("book_upload_failed", message);
     const status =
       message === "file_too_large"
         ? 413
         : message === "unsupported_type" ||
             message === "empty_text" ||
-            message === "no_chapters_found"
+            message === "no_chapters_found" ||
+            message === "book_id_conflict"
           ? 400
           : 500;
-    return NextResponse.json(
-      { error: message, detail: message },
-      { status },
-    );
+    return NextResponse.json({ error: message, detail: message }, { status });
   }
 }

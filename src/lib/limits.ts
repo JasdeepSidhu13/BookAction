@@ -1,14 +1,19 @@
 /** Shared input limits to avoid unbounded writes. */
 export const LIMITS = {
-  answerText: 8000,
-  questionText: 2000,
+  answerText: 4000,
+  questionText: 1000,
+  questionId: 120,
   customPrompt: 1000,
+  maxAnswersPerCheckIn: 40,
+  maxCustomQuestionsPerChapter: 50,
+  maxBankAnswersPerChapter: 500,
   bookTitle: 200,
   bookAuthor: 120,
   uploadBytes: 12 * 1024 * 1024,
-  uploadChars: 1_200_000,
+  uploadChars: 800_000,
   maxChapters: 40,
-  chapterSourceChars: 14_000,
+  chapterSourceChars: 12_000,
+  uploadsPerHour: 10,
 } as const;
 
 export function clampText(value: string | null | undefined, max: number): string {

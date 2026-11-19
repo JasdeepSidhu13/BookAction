@@ -1,5 +1,6 @@
 import { sql } from "@/lib/db";
 import { listLibraryBooks, resolveChapter } from "@/lib/library";
+import { LIMITS, clampText } from "@/lib/limits";
 import type {
   AnswerMap,
   AnswerRow,
@@ -190,7 +191,10 @@ export async function saveAnswers(
     throw new Error("Check-in not editable");
   }
 
-  for (const [questionId, value] of Object.entries(answers)) {
+  const entries = Object.entries(answers).slice(0, LIMITS.maxAnswersPerCheckIn);
+  for (const [questionIdRaw, value] of entries) {
+    const questionId = clampText(questionIdRaw, LIMITS.questionId);
+    if (!questionId) continue;
     await sql(
       `insert into answers (check_in_id, question_id, value_number, value_text, value_choice, updated_at)
        values ($1, $2, $3, $4, $5, now())
@@ -203,8 +207,8 @@ export async function saveAnswers(
         checkInId,
         questionId,
         value.valueNumber ?? null,
-        value.valueText ?? null,
-        value.valueChoice ?? null,
+        value.valueText != null ? clampText(value.valueText, LIMITS.answerText) || null : null,
+        value.valueChoice != null ? clampText(value.valueChoice, 80) || null : null,
       ],
     );
   }

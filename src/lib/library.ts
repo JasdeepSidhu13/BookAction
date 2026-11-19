@@ -3,7 +3,7 @@ import type { Book } from "@/lib/types";
 import { getUserBook, listUserBooks } from "@/lib/userBooks";
 
 export async function listLibraryBooks(ownerSub: string): Promise<Book[]> {
-  const uploaded = await listUserBooks(ownerSub);
+  const uploaded = ownerSub ? await listUserBooks(ownerSub) : [];
   return [...catalogBooks, ...uploaded];
 }
 
@@ -14,6 +14,7 @@ export async function resolveBook(
   if (!bookId) return catalogBooks[0];
   const catalog = getCatalogBook(bookId);
   if (catalog) return catalog;
+  if (!ownerSub) return undefined;
   return getUserBook(ownerSub, bookId);
 }
 

@@ -126,15 +126,22 @@ export function stripFrontAndBackMatter(text: string): string {
   let body = text;
   const lower = body.toLowerCase();
 
+  // Prefer the narrative body (after preface), not the table-of-contents hit.
+  const campBody = lower.search(
+    /(?:^|\n)\s*(?:i\s*\n+)?experiences\s+in\s+a\s*\n?\s*concentration\s+camp\b[\s\S]{0,120}this book does not claim/i,
+  );
   const startCandidates = [
+    campBody,
+    [...lower.matchAll(/(?:^|\n)\s*(?:i\s*\n+)?experiences\s+in\s+a\s*\n?\s*concentration\s+camp\b/gi)].map(
+      (m) => m.index ?? -1,
+    ).filter((n) => n >= 4000)[0] ?? -1,
     lower.search(/(?:^|\n)\s*part\s+(one|1|i)\b/),
     lower.search(/(?:^|\n)\s*chapter\s+(one|1|i)\b/),
-    lower.search(/(?:^|\n)\s*experiences in a concentration camp\b/),
-    lower.search(/(?:^|\n)\s*logotherapy\b/),
   ].filter((n) => n >= 0);
   if (startCandidates.length) {
-    const start = Math.min(...startCandidates);
-    body = body.slice(start > 2500 ? start : Math.max(0, start));
+    // Take the latest plausible front-matter cut so TOC hits are skipped.
+    const start = Math.max(...startCandidates.filter((n) => n < body.length * 0.4));
+    if (start >= 0) body = body.slice(start);
   } else if (body.length > 8000) {
     body = body.slice(Math.floor(body.length * 0.03));
   }

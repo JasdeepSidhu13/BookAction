@@ -20,6 +20,17 @@ type Hit = {
  */
 export function splitChapters(text: string): RawChapter[] {
   const normalized = text.slice(0, LIMITS.uploadChars);
+
+  // Frankl editions often split titles across lines ("EXPERIENCES IN A" /
+  // "CONCENTRATION CAMP"). Prefer those major parts when present.
+  const frankl = detectFranklMajorSections(normalized);
+  if (frankl.length >= 2 && chaptersLookUseful(frankl)) {
+    if (shouldSubdivide(frankl)) {
+      return polishFranklSections(normalized, frankl);
+    }
+    return frankl.slice(0, LIMITS.maxChapters);
+  }
+
   const detected = detectMarkedChapters(normalized);
 
   if (detected.length >= 2 && chaptersLookUseful(detected)) {
@@ -30,6 +41,94 @@ export function splitChapters(text: string): RawChapter[] {
   }
 
   return divideIntoSections(normalized, 5, 7);
+}
+
+/** Known Man’s Search for Meaning part titles, tolerant of PDF line breaks. */
+function detectFranklMajorSections(text: string): RawChapter[] {
+  const patterns: { title: string; re: RegExp }[] = [
+    {
+      title: "Experiences in a Concentration Camp",
+      re: /(?:^|\n)\s*(?:I\s*\n+)?EXPERIENCES\s+IN\s+A\s*\n?\s*CONCENTRATION\s+CAMP\b/gi,
+    },
+    {
+      title: "Logotherapy in a Nutshell",
+      re: /(?:^|\n)\s*(?:II\s*\n+)?LOGOTHERAPY\s*(?:\n+\s*)?IN\s+A\s+NUTSHELL\b/gi,
+    },
+    {
+      title: "The Case for a Tragic Optimism",
+      re: /(?:^|\n)\s*(?:POSTSCRIPT\s*\n?\s*1984\s*\n+)?THE\s+CASE\s+FOR\s+A\s*\n?\s*TRAGIC\s+OPTIMISM\b/gi,
+    },
+  ];
+
+  const tocEnd = estimateTocEnd(text);
+  const hits: { index: number; title: string }[] = [];
+  for (const pattern of patterns) {
+    let best = -1;
+    for (const match of text.matchAll(pattern.re)) {
+      const index = match.index ?? -1;
+      if (index < 0) continue;
+      // Prefer the body occurrence after the table of contents / front matter.
+      if (index >= Math.max(tocEnd, 4_000)) {
+        best = index;
+        break;
+      }
+      if (best < 0) best = index;
+    }
+    if (best >= 0) hits.push({ index: best, title: pattern.title });
+  }
+
+  hits.sort((a, b) => a.index - b.index);
+  const unique: { index: number; title: string }[] = [];
+  for (const hit of hits) {
+    if (unique.some((u) => Math.abs(u.index - hit.index) < 80)) continue;
+    unique.push(hit);
+  }
+  if (unique.length < 2) return [];
+
+  return unique.map((hit, i) => {
+    const end = i + 1 < unique.length ? unique[i + 1].index : text.length;
+    let body = text.slice(hit.index, end).trim();
+    body = stripLeadingTitle(body, hit.title);
+    return {
+      number: i + 1,
+      title: hit.title,
+      body: body.slice(0, LIMITS.chapterSourceChars * 3),
+    };
+  });
+}
+
+/**
+ * Keep Logotherapy + Tragic Optimism intact; subdivide the long camp narrative
+ * into actionable sections with grounded titles.
+ */
+function polishFranklSections(text: string, frankl: RawChapter[]): RawChapter[] {
+  const camp = frankl.find((c) => /concentration camp/i.test(c.title));
+  const rest = frankl.filter((c) => c !== camp);
+  if (!camp || camp.body.length < 8_000) {
+    return divideIntoSections(text, 5, 7);
+  }
+
+  const campSections = divideIntoSections(camp.body, 3, 4).map((section, i) => ({
+    ...section,
+    number: i + 1,
+    title:
+      i === 0
+        ? "Shock of Admission"
+        : i === 1
+          ? "The Last of the Human Freedoms"
+          : i === 2
+            ? "Inner Life Under Extremity"
+            : "Liberation",
+  }));
+
+  const chapters = [
+    ...campSections,
+    ...rest.map((c, i) => ({
+      ...c,
+      number: campSections.length + i + 1,
+    })),
+  ];
+  return chapters.slice(0, LIMITS.maxChapters);
 }
 
 /** Frankl-style books: 1–3 huge parts, weak titles, or very long average chapter. */

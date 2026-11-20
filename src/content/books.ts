@@ -1,8 +1,13 @@
 import type { Book } from "@/lib/types";
 import { awakenTheGiantWithin } from "./awaken";
 import { theConfidenceGap } from "./confidence-gap";
+import { mansSearchForMeaning } from "./mans-search";
 
-export const books: Book[] = [awakenTheGiantWithin, theConfidenceGap];
+export const books: Book[] = [
+  awakenTheGiantWithin,
+  theConfidenceGap,
+  mansSearchForMeaning,
+];
 
 export function getBook(bookId: string): Book | undefined {
   return books.find((b) => b.id === bookId);

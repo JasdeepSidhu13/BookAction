@@ -123,7 +123,9 @@ export async function saveBankAnswer(input: {
       ownerSub,
       input.bookId,
       input.chapterId,
-      input.questionId ?? null,
+      input.questionId != null
+        ? clampText(input.questionId, LIMITS.questionId) || null
+        : null,
       questionText,
       answerText || null,
       input.valueNumber ?? null,

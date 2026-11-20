@@ -1,38 +1,49 @@
 /**
  * Normalize PDF-extracted text so chapter detection and summaries see prose,
  * not page chrome, soft wraps, or hyphenation artifacts.
+ *
+ * Avoids catastrophic multiline regexes and quadratic string rebuilds on
+ * very large uploads (capped upstream by LIMITS.uploadChars).
  */
 export function cleanPdfText(raw: string): string {
-  let text = raw.replace(/\r\n?/g, "\n").replace(/\u0000/g, "");
+  let text = raw.replace(/\r\n?/g, "\n").replace(/\u0000/g, "").replace(/\f/g, "\n");
 
   // Soft hyphen / line-break hyphenation: "deci-\nsion" → "decision"
   text = text.replace(/([A-Za-z])-\n([a-z])/g, "$1$2");
 
-  // Drop common pirate / watermark / running-header noise
-  text = text
-    .split("\n")
-    .filter((line) => {
-      const t = line.trim();
-      if (!t) return true;
-      if (/oceanofpdf/i.test(t)) return false;
-      if (/^https?:\/\//i.test(t) && t.length < 120) return false;
-      if (/^(downloaded|free download|www\.)/i.test(t)) return false;
-      if (/^man’s search for meaning$/i.test(t) && t.length < 40) return false;
-      if (/^viktor e\.? frankl$/i.test(t)) return false;
-      return true;
-    })
-    .join("\n");
+  const lines = text.split("\n");
+  const kept: string[] = [];
+  for (const line of lines) {
+    const t = line.trim();
+    if (!t) {
+      kept.push("");
+      continue;
+    }
+    // Standalone page numbers — line check, not a multiline regex over the whole doc.
+    if (/^\d{1,4}$/.test(t)) continue;
+    if (/oceanofpdf/i.test(t)) continue;
+    if (/^https?:\/\//i.test(t) && t.length < 120) continue;
+    if (/^(downloaded|free download|www\.)/i.test(t)) continue;
+    if (/^man’s search for meaning$/i.test(t) && t.length < 40) continue;
+    if (/^viktor e\.? frankl$/i.test(t)) continue;
+    kept.push(t);
+  }
 
-  // Remove standalone page numbers and form-feed junk
-  text = text.replace(/^\s*\d{1,4}\s*$/gm, "");
-  text = text.replace(/\f/g, "\n");
+  // Collapse runs of blank lines, then join soft wraps per paragraph.
+  const paragraphs: string[] = [];
+  let buf: string[] = [];
+  const flush = () => {
+    if (buf.length === 0) return;
+    paragraphs.push(joinSoftWrapped(buf));
+    buf = [];
+  };
+  for (const line of kept) {
+    if (!line) flush();
+    else buf.push(line);
+  }
+  flush();
 
-  // Collapse runs of blank lines
-  text = text.replace(/\n{3,}/g, "\n\n");
-
-  // Join soft-wrapped lines into paragraphs (keep blank-line paragraph breaks)
-  const paragraphs = text.split(/\n{2,}/).map(joinSoftWrapped).filter(Boolean);
-  let joined = paragraphs.join("\n\n").trim();
+  let joined = paragraphs.filter(Boolean).join("\n\n").trim();
 
   // Some PDFs have almost no blank lines — invent paragraph breaks at sentence ends.
   if (paragraphs.length < 8 && joined.length > 4000) {
@@ -43,7 +54,6 @@ export function cleanPdfText(raw: string): string {
 }
 
 function inventParagraphs(text: string): string {
-  // Break every ~3–5 sentences into a paragraph-ish block.
   const sentences = text
     .replace(/\n+/g, " ")
     .replace(/\s+/g, " ")
@@ -58,25 +68,28 @@ function inventParagraphs(text: string): string {
   return parts.join("\n\n");
 }
 
-function joinSoftWrapped(block: string): string {
-  const lines = block.split("\n").map((l) => l.trim()).filter(Boolean);
+function joinSoftWrapped(lines: string[]): string {
   if (lines.length === 0) return "";
-
   const out: string[] = [];
-  let buf = lines[0];
+  let parts = [lines[0]];
+  const flushBuf = () => {
+    out.push(parts.join(" "));
+    parts = [];
+  };
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i];
+    const buf = parts.join(" ");
     const prevEndsSentence = /[.!?"”')\]]$/.test(buf);
     const looksHeading =
       isLikelyHeading(line) || isLikelyHeading(buf) || isChapterLine(line);
     if (looksHeading || (prevEndsSentence && /^[A-Z0-9"“]/.test(line))) {
-      out.push(buf);
-      buf = line;
+      flushBuf();
+      parts = [line];
     } else {
-      buf = `${buf} ${line}`.replace(/\s+/g, " ");
+      parts.push(line);
     }
   }
-  out.push(buf);
+  if (parts.length) flushBuf();
   return out.join("\n");
 }
 
@@ -94,9 +107,7 @@ export function isLikelyHeading(line: string): boolean {
   if (t.includes("?") && t.length > 40) return false;
   const letters = t.replace(/[^A-Za-z]/g, "");
   if (letters.length < 3) return false;
-  // ALL CAPS heading
   if (letters === letters.toUpperCase() && letters.length >= 4) return true;
-  // Title Case short line without sentence end
   if (
     !/[.!;:]$/.test(t) &&
     t.length <= 80 &&
@@ -115,7 +126,6 @@ export function stripFrontAndBackMatter(text: string): string {
   let body = text;
   const lower = body.toLowerCase();
 
-  // Prefer starting at first major part/chapter marker after page 1 fluff.
   const startCandidates = [
     lower.search(/(?:^|\n)\s*part\s+(one|1|i)\b/),
     lower.search(/(?:^|\n)\s*chapter\s+(one|1|i)\b/),
@@ -124,7 +134,6 @@ export function stripFrontAndBackMatter(text: string): string {
   ].filter((n) => n >= 0);
   if (startCandidates.length) {
     const start = Math.min(...startCandidates);
-    // Keep a little preface if the marker is very late
     body = body.slice(start > 2500 ? start : Math.max(0, start));
   } else if (body.length > 8000) {
     body = body.slice(Math.floor(body.length * 0.03));

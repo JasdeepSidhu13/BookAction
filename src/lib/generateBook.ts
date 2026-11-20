@@ -1,5 +1,9 @@
 import { randomBytes } from "node:crypto";
 import { LIMITS, clampText } from "@/lib/limits";
+import {
+  generateChaptersWithLlm,
+  resolveOpenAiKey,
+} from "@/lib/llmExtract";
 import { cleanPdfText, isChapterLine, isLikelyHeading } from "@/lib/pdfClean";
 import { splitChapters, type RawChapter } from "@/lib/sectionSplit";
 import type { BankQuestion, Chapter, Question, SummaryBlock } from "@/lib/types";
@@ -9,26 +13,42 @@ export type GeneratedBookPayload = {
   title: string;
   author: string;
   chapters: Chapter[];
-  mode: "heuristic";
+  mode: "heuristic" | "llm";
 };
 
 const ACCENTS = ["#2F6F6A", "#3730A3", "#B45309", "#155E75", "#9A3412", "#1D4ED8"];
 
 /**
  * Extract chapter summaries + Action / Question Bank prompts from uploaded text.
- * Uses local heuristics only (no external API).
+ * Uses OpenAI when a key is available (app secret or per-upload visitor key);
+ * otherwise falls back to local heuristics.
  */
 export async function generateBookFromText(input: {
   text: string;
   filename?: string;
   titleHint?: string;
   authorHint?: string;
+  /** Prefer AI when a key exists. Default true. */
+  preferLlm?: boolean;
+  /** Optional per-request OpenAI key (never stored). */
+  openAiApiKey?: string | null;
 }): Promise<GeneratedBookPayload> {
   const cleaned = cleanPdfText(input.text);
   const meta = inferMeta(cleaned, input.filename, input.titleHint, input.authorHint);
   const raw = splitChapters(cleaned).slice(0, LIMITS.maxChapters);
   if (raw.length === 0) {
     throw new Error("no_chapters_found");
+  }
+
+  const preferLlm = input.preferLlm !== false;
+  const apiKey = preferLlm ? resolveOpenAiKey(input.openAiApiKey) : "";
+  if (apiKey) {
+    try {
+      const chapters = await generateChaptersWithLlm(raw, apiKey);
+      return { ...meta, chapters, mode: "llm" };
+    } catch {
+      // Fall through so a bad key / quota still yields a usable library entry.
+    }
   }
 
   return {
@@ -58,7 +78,7 @@ export async function persistGeneratedBook(input: {
     `insert into user_books
       (id, owner_sub, title, author, cover_accent, source_filename, source_bytes,
        status, generation_mode, chapter_count, updated_at)
-     values ($1,$2,$3,$4,$5,$6,$7,'ready','heuristic',$8, now())
+     values ($1,$2,$3,$4,$5,$6,$7,'ready',$8,$9, now())
      on conflict (id) do nothing
      returning id`,
     [
@@ -69,6 +89,7 @@ export async function persistGeneratedBook(input: {
       accent,
       input.filename ?? null,
       input.bytes ?? null,
+      input.generated.mode,
       input.generated.chapters.length,
     ],
   );

@@ -2,11 +2,13 @@ import type { Book } from "@/lib/types";
 import { awakenTheGiantWithin } from "./awaken";
 import { theConfidenceGap } from "./confidence-gap";
 import { mansSearchForMeaning } from "./mans-search";
+import { atomicHabits } from "./atomic-habits";
 
 export const books: Book[] = [
   awakenTheGiantWithin,
   theConfidenceGap,
   mansSearchForMeaning,
+  atomicHabits,
 ];
 
 export function getBook(bookId: string): Book | undefined {

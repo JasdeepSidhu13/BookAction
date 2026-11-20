@@ -77,9 +77,12 @@ export function AppHeader({
               {initial}
             </div>
           ) : (
-            <span className="rounded-chip border border-line bg-wash px-3 py-2 text-sm font-medium text-soft">
-              Signed out
-            </span>
+            <Link
+              href="/signin"
+              className="inline-flex h-11 items-center rounded-chip bg-brand px-4 text-sm font-semibold text-white no-underline"
+            >
+              Sign in
+            </Link>
           )}
         </div>
       </div>

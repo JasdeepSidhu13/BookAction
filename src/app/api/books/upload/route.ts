@@ -76,13 +76,8 @@ export async function POST(request: Request) {
       openAiApiKey: visitorKey || null,
     });
 
-    if (modeRaw === "ai" && generated.mode !== "llm") {
-      return NextResponse.json(
-        { error: "ai_extract_failed", serverHasKey: serverHasOpenAiKey() },
-        { status: 502 },
-      );
-    }
-
+    // If AI was requested but timed out / failed, still save the local extract
+    // so the upload succeeds instead of returning an empty gateway error page.
     const bookId = newUserBookId(identity.sub, generated.title);
     await persistGeneratedBook({
       ownerSub: identity.sub,
@@ -113,12 +108,14 @@ export async function POST(request: Request) {
     const status =
       message === "file_too_large"
         ? 413
-        : message === "unsupported_type" ||
-            message === "empty_text" ||
-            message === "no_chapters_found" ||
-            message === "book_id_conflict"
-          ? 400
-          : 500;
+        : message === "ai_timeout"
+          ? 504
+          : message === "unsupported_type" ||
+              message === "empty_text" ||
+              message === "no_chapters_found" ||
+              message === "book_id_conflict"
+            ? 400
+            : 500;
     return NextResponse.json({ error: message, detail: message }, { status });
   }
 }

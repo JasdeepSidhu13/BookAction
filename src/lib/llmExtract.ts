@@ -24,17 +24,40 @@ export function resolveOpenAiKey(visitorKey?: string | null): string {
   return visitor;
 }
 
+/**
+ * AI-extract a bounded set of chapters in parallel so the upload route can
+ * finish before the published host gateway returns a non-JSON timeout page.
+ */
 export async function generateChaptersWithLlm(
   raw: RawChapter[],
   apiKey: string,
 ): Promise<Chapter[]> {
-  const chapters: Chapter[] = [];
   const model = process.env.OPENAI_MODEL?.trim() || "gpt-4o-mini";
+  const slice = raw.slice(0, LIMITS.maxLlmChapters);
+  const deadline = Date.now() + LIMITS.llmOverallMs;
+  const results: Chapter[] = new Array(slice.length);
 
-  for (let i = 0; i < raw.length; i++) {
-    const ch = raw[i];
-    const excerpt = ch.body.slice(0, LIMITS.chapterSourceChars);
-    const prompt = `You create chapter study guides for a reading + action app.
+  await mapPool(slice, LIMITS.llmConcurrency, async (ch, i) => {
+    const remaining = deadline - Date.now();
+    if (remaining <= 1_500) {
+      throw new Error("ai_timeout");
+    }
+    const perCall = Math.min(LIMITS.llmPerCallMs, remaining - 500);
+    results[i] = await extractOneChapter(ch, i, apiKey, model, perCall);
+  });
+
+  return results;
+}
+
+async function extractOneChapter(
+  ch: RawChapter,
+  index: number,
+  apiKey: string,
+  model: string,
+  timeoutMs: number,
+): Promise<Chapter> {
+  const excerpt = ch.body.slice(0, LIMITS.llmChapterSourceChars);
+  const prompt = `You create chapter study guides for a reading + action app.
 Return ONLY valid JSON with this shape:
 {
   "title": string,
@@ -62,8 +85,13 @@ Chapter ${ch.number} titled "${ch.title}":
 ${excerpt}
 """`;
 
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), Math.max(3_000, timeoutMs));
+  let res: Response;
+  try {
+    res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
+      signal: controller.signal,
       headers: {
         authorization: `Bearer ${apiKey}`,
         "content-type": "application/json",
@@ -82,158 +110,181 @@ ${excerpt}
         ],
       }),
     });
-    if (!res.ok) throw new Error(`llm_${res.status}`);
-    const data = (await res.json()) as {
-      choices?: { message?: { content?: string } }[];
-    };
-    const content = data.choices?.[0]?.message?.content ?? "";
-    const parsed = JSON.parse(content) as {
-      title?: string;
-      shortTitle?: string;
-      teaser?: string;
-      bigIdea?: string;
-      ideas?: { title: string; body: string }[];
-      insight?: string;
-      apply?: string[];
-      bankQuestions?: string[];
-      checkInPrompts?: {
-        scale1?: string;
-        text1?: string;
-        scale2?: string;
-        commitment?: string;
-      };
-    };
+  } catch (error) {
+    clearTimeout(timer);
+    if (controller.signal.aborted) throw new Error("ai_timeout");
+    throw error;
+  }
+  clearTimeout(timer);
 
-    const title = clampText(parsed.title || ch.title, 120);
-    const bank: BankQuestion[] = (parsed.bankQuestions ?? [])
-      .map((q) => clampText(q, LIMITS.questionText))
-      .filter(Boolean)
-      .slice(0, 12)
-      .map((promptText, qi) => ({
-        id: `u${ch.number}-${qi + 1}`,
-        prompt: promptText,
-        section: qi < 4 ? "Reflection" : "Action",
-        type: "text" as const,
-      }));
+  if (!res.ok) throw new Error(`llm_${res.status}`);
+  const data = (await res.json()) as {
+    choices?: { message?: { content?: string } }[];
+  };
+  const content = data.choices?.[0]?.message?.content ?? "";
+  const parsed = JSON.parse(content) as {
+    title?: string;
+    shortTitle?: string;
+    teaser?: string;
+    bigIdea?: string;
+    ideas?: { title: string; body: string }[];
+    insight?: string;
+    apply?: string[];
+    bankQuestions?: string[];
+    checkInPrompts?: {
+      scale1?: string;
+      text1?: string;
+      scale2?: string;
+      commitment?: string;
+    };
+  };
 
-    const ideas = (parsed.ideas ?? []).slice(0, 6).map((idea) => ({
-      title: clampText(idea.title, 80),
-      body: clampText(idea.body, 280),
+  const title = clampText(parsed.title || ch.title, 120);
+  const bank: BankQuestion[] = (parsed.bankQuestions ?? [])
+    .map((q) => clampText(q, LIMITS.questionText))
+    .filter(Boolean)
+    .slice(0, 12)
+    .map((promptText, qi) => ({
+      id: `u${ch.number}-${qi + 1}`,
+      prompt: promptText,
+      section: qi < 4 ? "Reflection" : "Action",
+      type: "text" as const,
     }));
 
-    const summary: SummaryBlock[] = [
-      {
-        type: "bigIdea",
-        text: clampText(parsed.bigIdea || excerpt.slice(0, 280), 400),
-      },
-      {
-        type: "toc",
-        items: [
-          { id: "key", label: "Key ideas", color: "#3730A3" },
-          { id: "insight", label: "Key insight", color: "#B45309" },
-          { id: "apply", label: "Apply it", color: "#166534" },
-        ],
-      },
-      {
-        type: "keyIdeas",
-        id: "key",
-        title: "Key ideas",
-        accent: "#3730A3",
-        ideas: ideas.length
-          ? ideas
-          : [{ title: "Core takeaway", body: clampText(parsed.bigIdea || excerpt, 220) }],
-      },
-      {
-        type: "insight",
-        id: "insight",
-        text: clampText(parsed.insight || parsed.bigIdea || excerpt.slice(0, 220), 320),
-      },
-      {
-        type: "apply",
-        id: "apply",
-        title: "Apply it",
-        accent: "#166534",
-        items: (parsed.apply?.length ? parsed.apply : [
-          "Write one sentence capturing this section’s main idea.",
-          "Name where it shows up in your life this week.",
-          "Take one small action within 24 hours.",
-        ])
-          .slice(0, 4)
-          .map((s) => clampText(s, 240)),
-      },
-    ];
+  const ideas = (parsed.ideas ?? []).slice(0, 6).map((idea) => ({
+    title: clampText(idea.title, 80),
+    body: clampText(idea.body, 280),
+  }));
 
-    const cp = parsed.checkInPrompts ?? {};
-    const fallbackBank =
-      bank.length > 0
-        ? bank
-        : [
-            {
-              id: `u${ch.number}-1`,
-              prompt: "What is the core claim of this section for me?",
-              section: "Reflection",
-              type: "text" as const,
-            },
-          ];
-
-    chapters.push({
-      id: `ch-${ch.number}-${slugify(title)}`,
-      number: ch.number,
-      title,
-      shortTitle: clampText(parsed.shortTitle || title, 28),
-      part: `Part ${Math.ceil((i + 1) / 5)}`,
-      teaser: clampText(parsed.teaser || parsed.bigIdea || "", 160),
-      readMinutes: Math.min(
-        20,
-        Math.max(5, Math.round(excerpt.split(/\s+/).filter(Boolean).length / 200)),
-      ),
-      summary,
-      questions: [
-        {
-          id: `uq${ch.number}-1`,
-          prompt:
-            clampText(cp.scale1, LIMITS.questionText) ||
-            "How consistently did I practice this chapter’s main idea this week?",
-          type: "scale",
-          help: "Scale · 1 = not at all, 10 = fully",
-        },
-        {
-          id: `uq${ch.number}-2`,
-          prompt:
-            clampText(cp.text1, LIMITS.questionText) ||
-            fallbackBank[0]?.prompt ||
-            "What insight mattered most?",
-          type: "text",
-        },
-        {
-          id: `uq${ch.number}-3`,
-          prompt:
-            clampText(cp.scale2, LIMITS.questionText) ||
-            "How clear is my next action from this chapter?",
-          type: "scale",
-          help: "Scale · 1 = unclear, 10 = crystal clear",
-        },
-        {
-          id: `uq${ch.number}-4`,
-          prompt: "Did I take the first action I committed to last time?",
-          type: "choice",
-          choices: ["Yes", "Partly", "No"],
-          followsCommitment: true,
-        },
-        {
-          id: `uq${ch.number}-5`,
-          prompt:
-            clampText(cp.commitment, LIMITS.questionText) ||
-            "What am I committing to now, and what is my first step?",
-          type: "text",
-          tracksCommitment: true,
-        },
+  const summary: SummaryBlock[] = [
+    {
+      type: "bigIdea",
+      text: clampText(parsed.bigIdea || excerpt.slice(0, 280), 400),
+    },
+    {
+      type: "toc",
+      items: [
+        { id: "key", label: "Key ideas", color: "#3730A3" },
+        { id: "insight", label: "Key insight", color: "#B45309" },
+        { id: "apply", label: "Apply it", color: "#166534" },
       ],
-      bankQuestions: fallbackBank,
-    });
-  }
+    },
+    {
+      type: "keyIdeas",
+      id: "key",
+      title: "Key ideas",
+      accent: "#3730A3",
+      ideas: ideas.length
+        ? ideas
+        : [{ title: "Core takeaway", body: clampText(parsed.bigIdea || excerpt, 220) }],
+    },
+    {
+      type: "insight",
+      id: "insight",
+      text: clampText(parsed.insight || parsed.bigIdea || excerpt.slice(0, 220), 320),
+    },
+    {
+      type: "apply",
+      id: "apply",
+      title: "Apply it",
+      accent: "#166534",
+      items: (parsed.apply?.length
+        ? parsed.apply
+        : [
+            "Write one sentence capturing this section’s main idea.",
+            "Name where it shows up in your life this week.",
+            "Take one small action within 24 hours.",
+          ]
+      )
+        .slice(0, 4)
+        .map((s) => clampText(s, 240)),
+    },
+  ];
 
-  return chapters;
+  const cp = parsed.checkInPrompts ?? {};
+  const fallbackBank =
+    bank.length > 0
+      ? bank
+      : [
+          {
+            id: `u${ch.number}-1`,
+            prompt: "What is the core claim of this section for me?",
+            section: "Reflection",
+            type: "text" as const,
+          },
+        ];
+
+  return {
+    id: `ch-${ch.number}-${slugify(title)}`,
+    number: ch.number,
+    title,
+    shortTitle: clampText(parsed.shortTitle || title, 28),
+    part: `Part ${Math.ceil((index + 1) / 5)}`,
+    teaser: clampText(parsed.teaser || parsed.bigIdea || "", 160),
+    readMinutes: Math.min(
+      20,
+      Math.max(5, Math.round(excerpt.split(/\s+/).filter(Boolean).length / 200)),
+    ),
+    summary,
+    questions: [
+      {
+        id: `uq${ch.number}-1`,
+        prompt:
+          clampText(cp.scale1, LIMITS.questionText) ||
+          "How consistently did I practice this chapter’s main idea this week?",
+        type: "scale",
+        help: "Scale · 1 = not at all, 10 = fully",
+      },
+      {
+        id: `uq${ch.number}-2`,
+        prompt:
+          clampText(cp.text1, LIMITS.questionText) ||
+          fallbackBank[0]?.prompt ||
+          "What insight mattered most?",
+        type: "text",
+      },
+      {
+        id: `uq${ch.number}-3`,
+        prompt:
+          clampText(cp.scale2, LIMITS.questionText) ||
+          "How clear is my next action from this chapter?",
+        type: "scale",
+        help: "Scale · 1 = unclear, 10 = crystal clear",
+      },
+      {
+        id: `uq${ch.number}-4`,
+        prompt: "Did I take the first action I committed to last time?",
+        type: "choice",
+        choices: ["Yes", "Partly", "No"],
+        followsCommitment: true,
+      },
+      {
+        id: `uq${ch.number}-5`,
+        prompt:
+          clampText(cp.commitment, LIMITS.questionText) ||
+          "What am I committing to now, and what is my first step?",
+        type: "text",
+        tracksCommitment: true,
+      },
+    ],
+    bankQuestions: fallbackBank,
+  };
+}
+
+async function mapPool<T>(
+  items: T[],
+  concurrency: number,
+  worker: (item: T, index: number) => Promise<void>,
+): Promise<void> {
+  let next = 0;
+  const runners = Array.from({ length: Math.min(concurrency, items.length) }, async () => {
+    while (true) {
+      const i = next++;
+      if (i >= items.length) return;
+      await worker(items[i], i);
+    }
+  });
+  await Promise.all(runners);
 }
 
 function slugify(value: string): string {

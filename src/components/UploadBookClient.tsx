@@ -83,6 +83,7 @@ export function UploadBookClient({
         body.set("openaiApiKey", visitorKey.trim());
       }
       const res = await fetch("/api/books/upload", { method: "POST", body });
+      const rawText = await res.text();
       let data: {
         error?: string;
         detail?: string;
@@ -95,9 +96,14 @@ export function UploadBookClient({
         };
       } = {};
       try {
-        data = await res.json();
+        data = rawText ? (JSON.parse(rawText) as typeof data) : {};
       } catch {
-        setStatus("Upload failed — the server returned an unexpected response.");
+        // Host gateways often return HTML 502/504 when AI extract exceeds the limit.
+        setStatus(
+          res.status === 502 || res.status === 504 || res.status === 524
+            ? "Upload timed out. Try Fast local extract, or a shorter PDF."
+            : "Upload failed — the server returned an unexpected response. Try Fast local extract.",
+        );
         setBusy(false);
         return;
       }
@@ -362,6 +368,8 @@ function errorMessage(code: string | undefined): string {
       return "AI extract needs an OpenAI key — paste yours, or bind OPENAI_API_KEY in Secrets.";
     case "ai_extract_failed":
       return "AI extract failed (key, quota, or model). Check the key or try Fast local extract.";
+    case "ai_timeout":
+      return "AI extract took too long. Try Fast local extract, or a shorter PDF.";
     default:
       return code
         ? `Upload failed (${code}). Try again with a PDF under 12 MB.`

@@ -26,6 +26,11 @@ export const atomicHabits: Book = {
   author: "James Clear",
   coverAccent: "#0F766E",
   totalChaptersHint: 10,
+  editionLabel: "Essentials · 10 chapters",
+  alternateEdition: {
+    bookId: "atomic-habits-complete",
+    label: "Complete · 20 chapters",
+  },
   chapters: [ch1, ch2, ch3, ch4, ch5, ch6, ch7, ch8, ch9, ch10].map((c) =>
     withBank(c as ChapterSeed),
   ),

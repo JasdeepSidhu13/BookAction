@@ -13,6 +13,12 @@ type Props = {
   chapterCount: number;
   firstChapterId: string;
   canDelete: boolean;
+  editionLabel?: string;
+  /** When set, show Essentials/Complete switcher under the card. */
+  editionSwitch?: {
+    essentials: { bookId: string; firstChapterId: string };
+    complete: { bookId: string; firstChapterId: string };
+  };
 };
 
 export function LibraryBookCard({
@@ -23,6 +29,8 @@ export function LibraryBookCard({
   chapterCount,
   firstChapterId,
   canDelete,
+  editionLabel,
+  editionSwitch,
 }: Props) {
   const router = useRouter();
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -63,6 +71,10 @@ export function LibraryBookCard({
     }
   }
 
+  const currentIsEssentials = editionSwitch
+    ? id === editionSwitch.essentials.bookId
+    : true;
+
   return (
     <div className="flex flex-col gap-3">
       <Link
@@ -73,10 +85,42 @@ export function LibraryBookCard({
         <span className="flex flex-col gap-1">
           <span className="text-[15px] font-semibold">{title}</span>
           <span className="text-[13px] text-muted">
-            In progress · {chapterCount} chapters ready
+            {editionLabel
+              ? editionLabel
+              : `In progress · ${chapterCount} chapters ready`}
           </span>
         </span>
       </Link>
+      {editionSwitch ? (
+        <div
+          className="inline-flex gap-1 rounded-control bg-track p-1"
+          role="group"
+          aria-label={`${title} edition`}
+        >
+          <Link
+            href={`/books/${editionSwitch.essentials.bookId}/chapters/${editionSwitch.essentials.firstChapterId}`}
+            aria-current={currentIsEssentials ? "page" : undefined}
+            className={
+              currentIsEssentials
+                ? "inline-flex h-8 flex-1 items-center justify-center rounded-[8px] bg-white px-2 text-center text-[11px] font-semibold text-ink no-underline shadow-tab"
+                : "inline-flex h-8 flex-1 items-center justify-center rounded-[8px] px-2 text-center text-[11px] font-medium text-soft no-underline"
+            }
+          >
+            Essentials · 10
+          </Link>
+          <Link
+            href={`/books/${editionSwitch.complete.bookId}/chapters/${editionSwitch.complete.firstChapterId}`}
+            aria-current={!currentIsEssentials ? "page" : undefined}
+            className={
+              !currentIsEssentials
+                ? "inline-flex h-8 flex-1 items-center justify-center rounded-[8px] bg-white px-2 text-center text-[11px] font-semibold text-ink no-underline shadow-tab"
+                : "inline-flex h-8 flex-1 items-center justify-center rounded-[8px] px-2 text-center text-[11px] font-medium text-soft no-underline"
+            }
+          >
+            Complete · 20
+          </Link>
+        </div>
+      ) : null}
 
       {canDelete ? (
         <button

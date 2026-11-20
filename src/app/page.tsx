@@ -273,18 +273,54 @@ export default async function LibraryPage() {
             </span>
           </div>
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-[repeat(auto-fill,minmax(200px,1fr))]">
-            {books.map((b) => (
-              <LibraryBookCard
-                key={b.id}
-                id={b.id}
-                title={b.title}
-                author={b.author}
-                coverAccent={b.coverAccent}
-                chapterCount={b.chapters.length}
-                firstChapterId={b.chapters[0].id}
-                canDelete={uploadedIds.has(b.id)}
-              />
-            ))}
+            {books
+              .filter((b) => {
+                // One library card for Atomic Habits; edition switch picks 10 vs 20.
+                if (
+                  b.id === "atomic-habits-complete" &&
+                  books.some((x) => x.id === "atomic-habits")
+                ) {
+                  return false;
+                }
+                return true;
+              })
+              .map((b) => {
+                const essentials = books.find((x) => x.id === "atomic-habits");
+                const complete = books.find(
+                  (x) => x.id === "atomic-habits-complete",
+                );
+                const editionSwitch =
+                  b.id === "atomic-habits" && essentials && complete
+                    ? {
+                        essentials: {
+                          bookId: essentials.id,
+                          firstChapterId: essentials.chapters[0].id,
+                        },
+                        complete: {
+                          bookId: complete.id,
+                          firstChapterId: complete.chapters[0].id,
+                        },
+                      }
+                    : undefined;
+                return (
+                  <LibraryBookCard
+                    key={b.id}
+                    id={b.id}
+                    title={b.title}
+                    author={b.author}
+                    coverAccent={b.coverAccent}
+                    chapterCount={b.chapters.length}
+                    firstChapterId={b.chapters[0].id}
+                    canDelete={uploadedIds.has(b.id)}
+                    editionLabel={
+                      editionSwitch
+                        ? "Essentials · 10 or Complete · 20"
+                        : b.editionLabel
+                    }
+                    editionSwitch={editionSwitch}
+                  />
+                );
+              })}
             <Link
               href="/upload"
               className="flex aspect-[7/10] flex-col items-center justify-center gap-2.5 rounded-control border-[1.5px] border-dashed border-[#C9C8C1] bg-transparent text-sm font-medium text-soft no-underline"

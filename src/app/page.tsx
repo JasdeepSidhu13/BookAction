@@ -3,10 +3,12 @@ import type { ReactNode } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { BookCover } from "@/components/BookCover";
 import { EmptyLibrary } from "@/components/EmptyLibrary";
+import { LibraryBookCard } from "@/components/LibraryBookCard";
 import { SignInBanner } from "@/components/SignInBanner";
 import { formatDueLabel, getDueCheckIns } from "@/lib/checkins";
 import { listLibraryBooks } from "@/lib/library";
 import { computeProgress } from "@/lib/progress";
+import { listUserBooks } from "@/lib/userBooks";
 import { getViewer } from "@/lib/viewer";
 
 export const dynamic = "force-dynamic";
@@ -14,6 +16,11 @@ export const dynamic = "force-dynamic";
 export default async function LibraryPage() {
   const viewer = await getViewer();
   const books = await listLibraryBooks(viewer.library);
+  const uploadedIds = new Set(
+    viewer.sub
+      ? (await listUserBooks(viewer.sub)).map((b) => b.id)
+      : [],
+  );
   const book = books[0];
   const today = new Date().toLocaleDateString("en-US", {
     weekday: "long",
@@ -267,19 +274,16 @@ export default async function LibraryPage() {
           </div>
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-[repeat(auto-fill,minmax(200px,1fr))]">
             {books.map((b) => (
-              <Link
+              <LibraryBookCard
                 key={b.id}
-                href={`/books/${b.id}/chapters/${b.chapters[0].id}`}
-                className="flex flex-col gap-3 text-ink no-underline"
-              >
-                <BookCover title={b.title} author={b.author} accent={b.coverAccent} />
-                <span className="flex flex-col gap-1">
-                  <span className="text-[15px] font-semibold">{b.title}</span>
-                  <span className="text-[13px] text-muted">
-                    In progress · {b.chapters.length} chapters ready
-                  </span>
-                </span>
-              </Link>
+                id={b.id}
+                title={b.title}
+                author={b.author}
+                coverAccent={b.coverAccent}
+                chapterCount={b.chapters.length}
+                firstChapterId={b.chapters[0].id}
+                canDelete={uploadedIds.has(b.id)}
+              />
             ))}
             <Link
               href="/upload"

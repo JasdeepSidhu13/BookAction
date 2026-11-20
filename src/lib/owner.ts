@@ -1,7 +1,7 @@
 /**
  * Who gets the built-in starter library (Awaken, Confidence Gap,
- * Man’s Search for Meaning, Atomic Habits). Everyone else starts empty
- * and only sees uploads.
+ * Man’s Search for Meaning, Atomic Habits Essentials + Complete).
+ * Everyone else starts empty and only sees uploads.
  *
  * Set CHAPTERWISE_OWNER_EMAIL and/or CHAPTERWISE_OWNER_USER_ID as app secrets
  * (no hardcoded personal identifiers in source).

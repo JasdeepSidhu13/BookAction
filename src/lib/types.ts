@@ -87,6 +87,10 @@ export type Book = {
   author: string;
   coverAccent: string;
   totalChaptersHint?: number;
+  /** Optional edition badge (e.g. Essentials vs Complete for Atomic Habits). */
+  editionLabel?: string;
+  /** Sibling edition for version switching. */
+  alternateEdition?: { bookId: string; label: string };
   chapters: Chapter[];
 };
 

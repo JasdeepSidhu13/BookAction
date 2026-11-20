@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
 import { BookCover } from "@/components/BookCover";
+import { BookEditionSwitch } from "@/components/BookEditionSwitch";
 import { SummaryBlocks } from "@/components/SummaryBlocks";
 import { getDueCheckIns } from "@/lib/checkins";
 import { resolveChapter } from "@/lib/library";
@@ -38,9 +39,12 @@ export default async function ChapterSummaryPage({
             <BookCover title={book.title} author={book.author} accent={book.coverAccent} size="sm" />
             <span className="flex flex-col gap-0.5">
               <span className="text-[15px] font-semibold leading-[1.3]">{book.title}</span>
-              <span className="text-[13px] text-muted">{book.author}</span>
+              <span className="text-[13px] text-muted">
+                {book.editionLabel ? `${book.author} · ${book.editionLabel}` : book.author}
+              </span>
             </span>
           </Link>
+          <BookEditionSwitch book={book} />
           <div className="flex flex-col gap-1.5">
             <span className="px-3 text-xs font-semibold uppercase tracking-[0.08em] text-muted">
               {chapter.part}

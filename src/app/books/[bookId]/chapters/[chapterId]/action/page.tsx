@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
+import { BookEditionSwitch } from "@/components/BookEditionSwitch";
 import { CheckInForm } from "@/components/CheckInForm";
 import {
   cadenceDays,
@@ -111,7 +112,15 @@ export default async function ActionCheckInPage({
               <h1 className="m-0 font-display text-[2rem] font-bold leading-[1.1] tracking-tight sm:text-[40px]">
                 {chapter.title}
               </h1>
-              <p className="m-0 text-sm text-muted">{book.title}</p>
+              <p className="m-0 text-sm text-muted">
+                {book.title}
+                {book.editionLabel ? ` · ${book.editionLabel}` : ""}
+              </p>
+              {book.alternateEdition ? (
+                <div className="pt-1">
+                  <BookEditionSwitch book={book} />
+                </div>
+              ) : null}
             </div>
             <Link
               href={`/question-bank?book=${book.id}&chapter=${chapter.id}`}

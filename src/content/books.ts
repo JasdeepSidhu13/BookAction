@@ -3,12 +3,14 @@ import { awakenTheGiantWithin } from "./awaken";
 import { theConfidenceGap } from "./confidence-gap";
 import { mansSearchForMeaning } from "./mans-search";
 import { atomicHabits } from "./atomic-habits";
+import { atomicHabitsComplete } from "./atomic-habits-complete";
 
 export const books: Book[] = [
   awakenTheGiantWithin,
   theConfidenceGap,
   mansSearchForMeaning,
   atomicHabits,
+  atomicHabitsComplete,
 ];
 
 export function getBook(bookId: string): Book | undefined {

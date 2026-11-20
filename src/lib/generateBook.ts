@@ -1,5 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { LIMITS, clampText } from "@/lib/limits";
+import { cleanPdfText, isChapterLine, isLikelyHeading } from "@/lib/pdfClean";
+import { splitChapters, type RawChapter } from "@/lib/sectionSplit";
 import type { BankQuestion, Chapter, Question, SummaryBlock } from "@/lib/types";
 import { sql } from "@/lib/db";
 
@@ -9,9 +11,6 @@ export type GeneratedBookPayload = {
   chapters: Chapter[];
   mode: "heuristic";
 };
-
-type RawChapter = { number: number; title: string; body: string };
-type Hit = { index: number; number: number; title: string; style: "block" | "chapter" | "dotted" };
 
 const ACCENTS = ["#2F6F6A", "#3730A3", "#B45309", "#155E75", "#9A3412", "#1D4ED8"];
 
@@ -25,8 +24,9 @@ export async function generateBookFromText(input: {
   titleHint?: string;
   authorHint?: string;
 }): Promise<GeneratedBookPayload> {
-  const meta = inferMeta(input.text, input.filename, input.titleHint, input.authorHint);
-  const raw = splitChapters(input.text).slice(0, LIMITS.maxChapters);
+  const cleaned = cleanPdfText(input.text);
+  const meta = inferMeta(cleaned, input.filename, input.titleHint, input.authorHint);
+  const raw = splitChapters(cleaned).slice(0, LIMITS.maxChapters);
   if (raw.length === 0) {
     throw new Error("no_chapters_found");
   }
@@ -54,7 +54,6 @@ export async function persistGeneratedBook(input: {
 }) {
   const accent = ACCENTS[Math.abs(hash(input.bookId)) % ACCENTS.length];
 
-  // Insert-only: never overwrite another owner's row on id conflict.
   const inserted = await sql<{ id: string }>(
     `insert into user_books
       (id, owner_sub, title, author, cover_accent, source_filename, source_bytes,
@@ -112,11 +111,30 @@ function inferMeta(
   titleHint?: string,
   authorHint?: string,
 ) {
-  const head = text.slice(0, 2500);
-  const titleFromText =
-    head.match(/(?:^|\n)([A-Z][A-Za-z0-9:'&\- ]{8,80})\s*(?:\n|$)/)?.[1] ?? "";
+  const head = text.slice(0, 4000);
+  const lines = head
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .slice(0, 25);
+
+  let titleFromText = "";
+  for (const line of lines) {
+    if (isChapterLine(line)) continue;
+    if (/^(table of contents|contents|copyright|isbn|by\b)/i.test(line)) continue;
+    if (line.length >= 6 && line.length <= 80 && !/[.!?]$/.test(line)) {
+      titleFromText = line;
+      break;
+    }
+  }
+
   const authorFromText =
-    head.match(/(?:by|author[:\s]+)\s*([A-Z][A-Za-z .'\-]{2,60})/i)?.[1] ?? "";
+    head.match(
+      /(?:^|\n)\s*(?:by|author[:\s]+)\s*([A-Z][A-Za-z .'\-]{2,60})/im,
+    )?.[1] ??
+    head.match(/\b(Viktor\s+E\.?\s+Frankl)\b/i)?.[1] ??
+    "";
+
   const fromFile = (filename ?? "")
     .replace(/\.[^.]+$/, "")
     .replace(/[_-]+/g, " ")
@@ -124,214 +142,73 @@ function inferMeta(
     .trim();
 
   return {
-    title: clampText(titleHint || titleFromText || fromFile || "Uploaded book", LIMITS.bookTitle),
-    author: clampText(authorHint || authorFromText || "Unknown", LIMITS.bookAuthor) || "Unknown",
+    title: clampText(
+      titleHint || titleFromText || fromFile || "Uploaded book",
+      LIMITS.bookTitle,
+    ),
+    author:
+      clampText(authorHint || authorFromText || "Unknown", LIMITS.bookAuthor) ||
+      "Unknown",
   };
-}
-
-/**
- * Line-oriented chapter detection — avoids nested \s* regexes that backtrack on whitespace.
- */
-function splitChapters(text: string): RawChapter[] {
-  const normalized = text.replace(/\r\n?/g, "\n").slice(0, LIMITS.uploadChars);
-  const lines = normalized.split("\n");
-  const lineOffsets: number[] = new Array(lines.length);
-  let offset = 0;
-  for (let i = 0; i < lines.length; i++) {
-    lineOffsets[i] = offset;
-    offset += lines[i].length + 1;
-  }
-
-  const hits: Hit[] = [];
-  for (let i = 0; i < lines.length; i++) {
-    const raw = lines[i];
-    const line = raw.trim();
-    if (!line) continue;
-
-    // "Chapter 12: Title" / "CHAPTER 3 Title"
-    const chapterWord = /^chapter\s+(\d{1,2}|[ivxlc]{1,6})\s*[:.\-–—]?\s*(.*)$/i.exec(line);
-    if (chapterWord) {
-      const number = romanOrInt(chapterWord[1]);
-      const title = cleanTitle(chapterWord[2] || `Chapter ${number}`);
-      if (number >= 1 && number <= 60 && title.length >= 2) {
-        hits.push({ index: lineOffsets[i], number, title, style: "chapter" });
-      }
-      continue;
-    }
-
-    // "1. Why Bother?" / "12) Title"
-    const dotted = /^(\d{1,2})[.)]\s+([A-Z].{2,100})$/.exec(line);
-    if (dotted) {
-      const number = Number(dotted[1]);
-      const title = cleanTitle(dotted[2]);
-      if (number >= 1 && number <= 60 && title.length >= 3) {
-        hits.push({ index: lineOffsets[i], number, title, style: "dotted" });
-      }
-      continue;
-    }
-
-    // Number alone, next non-empty line is title (common in print PDFs).
-    if (/^\d{1,2}$/.test(line)) {
-      let j = i + 1;
-      while (j < lines.length && !lines[j].trim()) j += 1;
-      if (j < lines.length) {
-        const titleLine = lines[j].trim();
-        if (/^[A-Z]/.test(titleLine) && titleLine.length >= 3 && titleLine.length <= 100) {
-          const number = Number(line);
-          if (number >= 1 && number <= 60) {
-            hits.push({
-              index: lineOffsets[i],
-              number,
-              title: cleanTitle(titleLine),
-              style: "block",
-            });
-          }
-        }
-      }
-    }
-  }
-
-  const unique = pickChapterSequence(hits).slice(0, LIMITS.maxChapters);
-  if (unique.length >= 2) {
-    return unique.map((hit, i) => {
-      const end = i + 1 < unique.length ? unique[i + 1].index : normalized.length;
-      const body = normalized.slice(hit.index, end).trim();
-      return {
-        number: hit.number || i + 1,
-        title: hit.title,
-        body: body.slice(0, LIMITS.chapterSourceChars * 3),
-      };
-    });
-  }
-
-  const chunks = chunkText(normalized, 9000).slice(0, LIMITS.maxChapters);
-  return chunks.map((body, i) => ({
-    number: i + 1,
-    title: `Section ${i + 1}`,
-    body,
-  }));
-}
-
-function pickChapterSequence(hits: Hit[]): Hit[] {
-  const styleRank: Record<Hit["style"], number> = { block: 3, chapter: 2, dotted: 1 };
-  const byNum = new Map<number, Hit[]>();
-  for (const hit of hits) {
-    const list = byNum.get(hit.number) ?? [];
-    list.push(hit);
-    byNum.set(hit.number, list);
-  }
-
-  const chosen: Hit[] = [];
-  let minIndex = 0;
-  for (let n = 1; n <= 60; n++) {
-    const options = (byNum.get(n) ?? [])
-      .filter((h) => h.index >= minIndex)
-      .sort((a, b) => {
-        const rank = styleRank[b.style] - styleRank[a.style];
-        if (rank !== 0) return rank;
-        return b.index - a.index; // prefer later body over early TOC
-      });
-    const pick = options.find((h) => h.style !== "dotted") ?? options[0];
-    if (!pick) break;
-    if (chosen.length > 0 && pick.index - chosen[chosen.length - 1].index < 400) continue;
-    chosen.push(pick);
-    minIndex = pick.index + 400;
-  }
-
-  if (chosen.length >= 2 && chosen[0].number === 1) return chosen;
-
-  const sorted = [...hits].sort((a, b) => a.index - b.index);
-  const run: Hit[] = [];
-  for (const hit of sorted) {
-    if (run.length === 0) {
-      run.push(hit);
-      continue;
-    }
-    const prev = run[run.length - 1];
-    if (hit.number === prev.number + 1 && hit.index - prev.index >= 400) run.push(hit);
-  }
-  return run.length >= chosen.length ? run : chosen;
 }
 
 function heuristicChapter(raw: RawChapter, idx: number): Chapter {
   const body = raw.body.slice(0, LIMITS.chapterSourceChars);
-  const paragraphs = body
-    .split(/\n{2,}/)
-    .map((p) => p.replace(/[ \t]+/g, " ").trim())
-    .filter((p) => p.length > 60);
-  const bigIdea =
-    paragraphs[0]?.slice(0, 320) ||
-    "This chapter invites you to notice key ideas and turn them into committed action.";
-  const headings = extractHeadings(body).slice(0, 5);
-  const ideas =
-    headings.length > 0
-      ? headings.map((h) => ({
-          title: h,
-          body:
-            nearestParagraph(body, h).slice(0, 220) ||
-            "Reflect on how this idea shows up in your life.",
-        }))
-      : paragraphs.slice(1, 5).map((p, i) => ({
-          title: `Key point ${i + 1}`,
-          body: p.slice(0, 220),
+  const sentences = extractSentences(body);
+  const scored = sentences
+    .map((s) => ({ text: s, score: scoreSentence(s) }))
+    .sort((a, b) => b.score - a.score);
+
+  const usable = scored.filter((s) => s.score >= 0);
+  const pool = usable.length ? usable : scored;
+
+  const thesis =
+    pickThesis(sentences, pool) ||
+    firstUsableLine(body) ||
+    body.replace(/\s+/g, " ").trim().slice(0, 220);
+
+  const sections = extractSectionIdeas(body);
+  const ideaPool =
+    sections.length >= 2
+      ? sections
+      : pool.slice(0, 10).map((s, i) => ({
+          title: ideaTitle(s.text, i),
+          body: tighten(s.text, 220),
         }));
 
-  const questionLines = extractQuestions(body);
-  const bank: BankQuestion[] = (
-    questionLines.length > 0
-      ? questionLines
-      : [
-          "What is the core idea of this chapter for me?",
-          "Where does this show up in my life right now?",
-          "What am I avoiding that this chapter points toward?",
-          "What would living this idea look like this week?",
-          "What first action will I take within 24 hours?",
-          "What might get in the way, and how will I respond?",
-        ]
-  )
-    .slice(0, 12)
-    .map((prompt, i) => ({
-      id: `u${raw.number}-${i + 1}`,
-      prompt: clampText(prompt, LIMITS.questionText),
-      section: i < 3 ? "Reflection" : i < 6 ? "Apply" : "Action",
-      type: "text" as const,
-    }));
+  const ideas = dedupeIdeas(ideaPool).slice(0, 4);
+  while (ideas.length < 2 && pool[ideas.length]) {
+    const s = pool[ideas.length];
+    ideas.push({
+      title: ideaTitle(s.text, ideas.length),
+      body: tighten(s.text, 180),
+    });
+  }
+  if (ideas.length < 2) {
+    ideas.push({
+      title: ideaTitle(thesis, ideas.length),
+      body: tighten(thesis, 180),
+    });
+  }
 
-  const questions: Question[] = [
-    {
-      id: `uq${raw.number}-1`,
-      prompt: "How consistently did I practice this chapter’s main idea this week?",
-      type: "scale",
-      help: "Scale · 1 = not at all, 10 = fully",
-    },
-    {
-      id: `uq${raw.number}-2`,
-      prompt: bank[0]?.prompt ?? "What insight from this chapter mattered most?",
-      type: "text",
-    },
-    {
-      id: `uq${raw.number}-3`,
-      prompt: "How clear is my next action from this chapter?",
-      type: "scale",
-      help: "Scale · 1 = unclear, 10 = crystal clear",
-    },
-    {
-      id: `uq${raw.number}-4`,
-      prompt: "Did I take the first action I committed to last time?",
-      type: "choice",
-      choices: ["Yes", "Partly", "No"],
-      followsCommitment: true,
-    },
-    {
-      id: `uq${raw.number}-5`,
-      prompt: "What am I committing to now, and what is my first step?",
-      type: "text",
-      tracksCommitment: true,
-    },
-  ];
+  const insight =
+    pool.find(
+      (s) =>
+        s.text.length >= 35 &&
+        s.text.length <= 200 &&
+        s.text !== thesis &&
+        !ideas.some((i) => i.body.startsWith(s.text.slice(0, 40))),
+    )?.text ||
+    sentences.find((s) => s !== thesis && s.length >= 35 && s.length <= 180) ||
+    tighten(thesis, 180);
+
+  const quotes = pool.slice(0, 6).map((s) => s.text);
+  const applyItems = buildApplyItems(body, ideas, thesis, quotes);
+  const bank = buildBankQuestions(body, raw.number, thesis, ideas, applyItems, quotes);
+  const questions = buildActionQuestions(raw.number, thesis, bank);
 
   const summary: SummaryBlock[] = [
-    { type: "bigIdea", text: bigIdea },
+    { type: "bigIdea", text: clampText(tighten(thesis, 320), 360) },
     {
       type: "toc",
       items: [
@@ -345,25 +222,19 @@ function heuristicChapter(raw: RawChapter, idx: number): Chapter {
       id: "key",
       title: "Key ideas",
       accent: "#3730A3",
-      ideas: ideas.length ? ideas : [{ title: "Start here", body: bigIdea.slice(0, 220) }],
+      ideas,
     },
     {
       type: "insight",
       id: "insight",
-      text:
-        paragraphs[1]?.slice(0, 260) ||
-        "Return to this chapter’s idea when you notice yourself waiting to feel ready before acting.",
+      text: clampText(tighten(insight, 260), 280),
     },
     {
       type: "apply",
       id: "apply",
       title: "Apply it",
       accent: "#166534",
-      items: [
-        bank[0]?.prompt ?? "Write one sentence capturing the chapter’s main idea.",
-        bank[1]?.prompt ?? "Name one place this idea applies in your life.",
-        "Take one small action within 24 hours and note what you learn.",
-      ].map((s) => clampText(s, 240)),
+      items: applyItems,
     },
   ];
 
@@ -378,7 +249,7 @@ function heuristicChapter(raw: RawChapter, idx: number): Chapter {
     title: raw.title,
     shortTitle,
     part: `Part ${partBucket}`,
-    teaser: clampText(bigIdea, 160),
+    teaser: clampText(tighten(thesis, 150), 160),
     readMinutes: Math.min(20, Math.max(5, Math.round(words / 200))),
     summary,
     questions,
@@ -386,80 +257,321 @@ function heuristicChapter(raw: RawChapter, idx: number): Chapter {
   };
 }
 
-function extractQuestions(body: string): string[] {
-  const lines = body.split("\n").map((l) => l.replace(/[ \t]+/g, " ").trim());
-  const out: string[] = [];
-  for (const line of lines) {
-    if (!line.includes("?")) continue;
-    if (line.length < 12 || line.length > 180) continue;
-    if (
-      /^(who|what|when|where|why|how|which|am|is|are|do|does|did|can|could|would|will|if)\b/i.test(
-        line,
-      ) ||
-      line.endsWith("?")
-    ) {
-      const q = line.replace(/^[\d.)\-]+\s*/, "");
-      if (!out.includes(q)) out.push(q);
+function firstUsableLine(body: string): string {
+  const lines = body
+    .split(/\n+/)
+    .map((l) => l.replace(/\s+/g, " ").trim())
+    .filter((l) => l.length >= 40 && /[a-z]/.test(l));
+  return lines[0] || body.replace(/\s+/g, " ").trim().slice(0, 220);
+}
+
+function extractSentences(body: string): string[] {
+  const blocks: string[] = [];
+  for (const line of body.split("\n")) {
+    const t = line.trim();
+    if (!t) continue;
+    if (isLikelyHeading(t) || isChapterLine(t)) {
+      blocks.push("\n");
+      continue;
+    }
+    blocks.push(t);
+  }
+  const prose = blocks
+    .join(" ")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\s*\n\s*/g, "\n")
+    .replace(/OceanofPDF\.com/gi, "")
+    .trim();
+
+  const parts = prose
+    .split(/\n+/)
+    .flatMap((para) =>
+      para.split(/(?<=[.!?])\s+(?=[A-Z"“])/).flatMap((s) => {
+        // Also split very long clauses on semicolons.
+        if (s.length > 220 && s.includes(";")) return s.split(/;\s+/);
+        return [s];
+      }),
+    );
+
+  const out = parts
+    .map((s) => s.trim())
+    .filter((s) => {
+      if (s.length < 28 || s.length > 320) return false;
+      if (/^(chapter|part|table of contents|copyright|isbn)\b/i.test(s)) return false;
+      if (/^\d+$/.test(s)) return false;
+      if (isLikelyHeading(s) && s.length < 50) return false;
+      const letters = (s.match(/[A-Za-z]/g) || []).length;
+      return letters / s.length > 0.5;
+    });
+
+  // PDF fragments with no punctuation — treat long lines as sentences.
+  if (out.length < 4) {
+    for (const line of body.split("\n")) {
+      const t = line.replace(/\s+/g, " ").trim();
+      if (t.length >= 45 && t.length <= 280 && /[a-z]/.test(t) && !isLikelyHeading(t)) {
+        if (!out.includes(t)) out.push(t);
+      }
     }
   }
+
   return out;
 }
 
-function extractHeadings(body: string): string[] {
+function scoreSentence(s: string): number {
+  let score = 1; // every real sentence starts usable
+  if (/\byou\b|\byour\b|\bone\b|\bman\b|\bhuman\b/i.test(s)) score += 2;
+  if (
+    /\b(must|should|need to|decide|commit|practice|change|create|build|choose|stop|start|mean|matter|meaning|purpose|freedom|suffer|attitude|responsib|hope|love|choice|will to)\b/i.test(
+      s,
+    )
+  ) {
+    score += 4;
+  }
+  if (/\bis not\b|\brather than\b|\binstead\b|\bbecause\b|\beven\b/i.test(s)) {
+    score += 2;
+  }
+  if (/[.]$/.test(s) && s.length >= 45 && s.length <= 200) score += 2;
+  if (/\?$/.test(s)) score += 1;
+  if (/^(figure|table|photo|illustration|page|chapter|part)\b/i.test(s)) score -= 6;
+  if (s.split(/\s+/).length < 7) score -= 2;
+  if (/^[A-Z\s]{10,}$/.test(s)) score -= 4;
+  return score;
+}
+
+function pickThesis(
+  sentences: string[],
+  scored: { text: string; score: number }[],
+): string {
+  const early = sentences.slice(0, 8).map((text, i) => ({
+    text,
+    score: scoreSentence(text) + (4 - Math.min(i, 4)),
+  }));
+  const pool = [...early, ...scored.slice(0, 8)].sort((a, b) => b.score - a.score);
+  const best = pool[0]?.text ?? "";
+  if (/[A-Z]{5,}\s+[A-Z]{5,}/.test(best)) {
+    return sentences.find((s) => !/[A-Z]{5,}\s+[A-Z]{5,}/.test(s)) ?? best;
+  }
+  return best;
+}
+
+function extractSectionIdeas(body: string): { title: string; body: string }[] {
   const lines = body.split("\n").map((l) => l.trim()).filter(Boolean);
+  const ideas: { title: string; body: string }[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (!isLikelyHeading(line) || isChapterLine(line)) continue;
+    if (/^(key ideas|apply|summary|contents)/i.test(line)) continue;
+    const following: string[] = [];
+    for (let j = i + 1; j < Math.min(lines.length, i + 8); j++) {
+      if (isLikelyHeading(lines[j]) || isChapterLine(lines[j])) break;
+      following.push(lines[j]);
+    }
+    const para = following.join(" ").replace(/\s+/g, " ").trim();
+    if (para.length < 40) continue;
+    const under = extractSentences(para);
+    const best =
+      under.map((t) => ({ t, s: scoreSentence(t) })).sort((a, b) => b.s - a.s)[0]
+        ?.t ?? para;
+    ideas.push({
+      title: titleCase(line).slice(0, 60),
+      body: tighten(best, 220),
+    });
+  }
+  return ideas;
+}
+
+function ideaTitle(sentence: string, index: number): string {
+  const cleaned = sentence.replace(/^[^A-Za-z]+/, "");
+  const clause = cleaned.split(/[:,—–-]/)[0]?.trim() ?? cleaned;
+  if (clause.length >= 12 && clause.length <= 52 && !/[.!?]$/.test(clause)) {
+    return titleCase(clause);
+  }
+  const words = cleaned.split(/\s+/).slice(0, 7).join(" ");
+  if (words.length >= 12) return titleCase(words.replace(/[.!?].*$/, ""));
+  return `Idea ${index + 1}`;
+}
+
+function dedupeIdeas(
+  ideas: { title: string; body: string }[],
+): { title: string; body: string }[] {
+  const out: { title: string; body: string }[] = [];
+  for (const idea of ideas) {
+    const key = idea.body.slice(0, 48).toLowerCase();
+    if (out.some((o) => o.body.slice(0, 48).toLowerCase() === key)) continue;
+    if (out.some((o) => o.title.toLowerCase() === idea.title.toLowerCase())) continue;
+    out.push({
+      title: clampText(idea.title, 80),
+      body: clampText(idea.body, 240),
+    });
+  }
+  return out;
+}
+
+function buildApplyItems(
+  body: string,
+  ideas: { title: string; body: string }[],
+  thesis: string,
+  quotes: string[],
+): string[] {
+  const imperatives = extractImperatives(body).slice(0, 2);
+  const items: string[] = [...imperatives];
+  const q0 = quotes[0] ? shortenQuote(quotes[0], 90) : tighten(thesis, 90);
+
+  if (ideas[0]) {
+    items.push(
+      `Where does “${ideas[0].title}” show up in your life this week? Write one concrete example.`,
+    );
+  }
+  items.push(
+    `Choose one first action (within 24 hours) that responds to: “${q0}”`,
+  );
+  items.push(
+    `Name what you cannot change here — and the attitude or meaning you can still choose.`,
+  );
+
+  return [...new Set(items.map((s) => clampText(s, 240)))].slice(0, 4);
+}
+
+function extractImperatives(body: string): string[] {
+  const sentences = extractSentences(body);
   const out: string[] = [];
-  for (const line of lines) {
-    const letters = line.replace(/[^A-Za-z]/g, "");
+  for (const s of sentences) {
+    if (s.length > 180 || s.length < 28) continue;
     if (
-      line.length >= 6 &&
-      line.length <= 60 &&
-      letters.length >= 4 &&
-      letters === letters.toUpperCase() &&
-      !line.includes("?")
+      /^(do|make|take|write|list|choose|set|stop|start|practice|ask|notice|schedule|commit|decide|create|build|put|keep|pick|name|reduce|attach|treat|adjust|accept|seek|find)\b/i.test(
+        s,
+      )
     ) {
-      const titled = line.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
-      if (!out.includes(titled)) out.push(titled);
+      out.push(tighten(s, 200));
     }
   }
   return out;
 }
 
-function nearestParagraph(body: string, heading: string): string {
-  const idx = body.toUpperCase().indexOf(heading.toUpperCase());
-  if (idx < 0) return "";
-  const slice = body.slice(idx, idx + 500);
-  const parts = slice.split(/\n{2,}/).map((p) => p.replace(/[ \t]+/g, " ").trim());
-  return parts[1] || parts[0] || "";
-}
+function buildBankQuestions(
+  body: string,
+  chapterNumber: number,
+  thesis: string,
+  ideas: { title: string; body: string }[],
+  applyItems: string[],
+  quotes: string[],
+): BankQuestion[] {
+  const extracted = extractQuestions(body);
+  const q1 = shortenQuote(quotes[0] || thesis, 100);
+  const q2 = shortenQuote(quotes[1] || ideas[0]?.body || thesis, 90);
+  const generated = [
+    `What does this section claim about human experience: “${q1}”?`,
+    `Where does “${ideas[0]?.title ?? "this idea"}” show up in my life right now?`,
+    `What suffering or friction am I facing that this text speaks to?`,
+    `If I took seriously “${q2}”, what would I do differently this week?`,
+    `What meaning or purpose can I choose in a situation I cannot fully control?`,
+    applyItems[0]
+      ? `Did I follow through on: ${applyItems[0].replace(/\?$/, "")}?`
+      : "What first action will I take within 24 hours?",
+    ideas[1]
+      ? `How could I practice “${ideas[1].title}” in a small way today?`
+      : "What would living this idea look like on an ordinary day?",
+    "What evidence would show me I am changing — not only intending to?",
+  ];
 
-function chunkText(text: string, size: number): string[] {
-  const parts: string[] = [];
-  let rest = text.trim();
-  while (rest.length > size) {
-    let cut = rest.lastIndexOf("\n\n", size);
-    if (cut < size * 0.5) cut = size;
-    parts.push(rest.slice(0, cut).trim());
-    rest = rest.slice(cut).trim();
+  const prompts = [...extracted, ...generated]
+    .map((p) => clampText(p.replace(/\s+/g, " ").trim(), LIMITS.questionText))
+    .filter((p) => p.length >= 12);
+  const unique: string[] = [];
+  for (const p of prompts) {
+    if (!unique.some((u) => u.toLowerCase() === p.toLowerCase())) unique.push(p);
   }
-  if (rest) parts.push(rest);
-  return parts;
+
+  return unique.slice(0, 10).map((prompt, i) => ({
+    id: `u${chapterNumber}-${i + 1}`,
+    prompt,
+    section: i < 3 ? "Reflection" : i < 6 ? "Apply" : "Action",
+    type: "text" as const,
+  }));
 }
 
-function romanOrInt(raw: string): number {
-  if (/^\d+$/.test(raw)) return Number(raw);
-  const map: Record<string, number> = { I: 1, V: 5, X: 10, L: 50, C: 100 };
-  let n = 0;
-  const s = raw.toUpperCase();
-  for (let i = 0; i < s.length; i++) {
-    const v = map[s[i]] ?? 0;
-    const next = map[s[i + 1]] ?? 0;
-    n += v < next ? -v : v;
+function buildActionQuestions(
+  chapterNumber: number,
+  thesis: string,
+  bank: BankQuestion[],
+): Question[] {
+  return [
+    {
+      id: `uq${chapterNumber}-1`,
+      prompt: "How consistently did I live this section’s main idea this week?",
+      type: "scale",
+      help: "Scale · 1 = not at all, 10 = fully",
+    },
+    {
+      id: `uq${chapterNumber}-2`,
+      prompt:
+        bank[0]?.prompt ??
+        `What from “${tighten(thesis, 80)}” mattered most this week?`,
+      type: "text",
+    },
+    {
+      id: `uq${chapterNumber}-3`,
+      prompt: "How clear is the meaning or next action I choose from this section?",
+      type: "scale",
+      help: "Scale · 1 = unclear, 10 = crystal clear",
+    },
+    {
+      id: `uq${chapterNumber}-4`,
+      prompt: "Did I take the first action I committed to last time?",
+      type: "choice",
+      choices: ["Yes", "Partly", "No"],
+      followsCommitment: true,
+    },
+    {
+      id: `uq${chapterNumber}-5`,
+      prompt: "What am I committing to now, and what is my first step?",
+      type: "text",
+      tracksCommitment: true,
+    },
+  ];
+}
+
+function extractQuestions(body: string): string[] {
+  const out: string[] = [];
+  for (const line of body.split("\n").map((l) => l.replace(/\s+/g, " ").trim())) {
+    if (!line.includes("?")) continue;
+    if (line.length < 16 || line.length > 180) continue;
+    const q = line.replace(/^[\d.)\-•]+\s*/, "");
+    if (!out.includes(q)) out.push(q);
   }
-  return n;
+  for (const s of extractSentences(body)) {
+    if (s.endsWith("?") && s.length >= 16 && s.length <= 180 && !out.includes(s)) {
+      out.push(s);
+    }
+  }
+  return out;
 }
 
-function cleanTitle(title: string): string {
-  return title.replace(/\s+/g, " ").replace(/OceanofPDF.*/i, "").trim() || "Untitled chapter";
+function shortenQuote(value: string, max: number): string {
+  const s = tighten(value, max).replace(/^["“]|["”]$/g, "");
+  return s;
+}
+
+function titleCase(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/\b([a-z])/g, (c) => c.toUpperCase())
+    .replace(/\b(A|An|The|And|Or|Of|To|In|On|For|With)\b/g, (w, _m, offset) =>
+      offset === 0 ? w : w.toLowerCase(),
+    );
+}
+
+function tighten(value: string, max: number): string {
+  let s = value.replace(/\s+/g, " ").trim();
+  if (s.length <= max) return s;
+  const cut = s.slice(0, max - 1);
+  const at = Math.max(
+    cut.lastIndexOf(". "),
+    cut.lastIndexOf("; "),
+    cut.lastIndexOf(", "),
+  );
+  if (at > max * 0.5) return cut.slice(0, at + (cut[at] === "." ? 1 : 0)).trim();
+  return `${cut.replace(/\s+\S*$/, "").trim()}…`;
 }
 
 function slugify(value: string): string {

@@ -41,12 +41,12 @@ export default async function SignInPage() {
           >
             Open Apps dashboard
           </a>
-          <a
-            href="https://chapterwise.apps.grok.bot/"
+          <Link
+            href="/"
             className="inline-flex h-12 items-center justify-center rounded-chip border border-line bg-white px-5 text-sm font-semibold text-ink no-underline"
           >
             I’ve set Private — open Chapterwise
-          </a>
+          </Link>
           <Link
             href="/"
             className="text-center text-sm font-medium text-soft no-underline hover:text-ink"

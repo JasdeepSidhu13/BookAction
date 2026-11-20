@@ -143,4 +143,174 @@ export const bankByChapterId: Record<string, BankQuestion[]> = {
     q("b9-13", "When might a strong emotion (like anger) still be useful — and at what intensity?", "Choosing intensity"),
     q("b9-14", "After 10 days of practice, what actually helped?", "Review"),
   ],
+
+  "ch-10-life-metaphors": [
+    q("b10-1", "What metaphors do I use for life?", "Opening"),
+    q("b10-2", "What metaphors do I use for learning, money, and health?", "Opening"),
+    q("b10-3", "What metaphors do I use for relationships or marriage?", "Relationships"),
+    q("b10-4", "Which of those empower intimacy — and which create distance or conflict?", "Relationships"),
+    q("b10-5", "What new metaphors would help me feel happier, freer, and more empowered?", "Rewrite"),
+    q("b10-6", "Where am I importing a workplace metaphor into home life?", "Rewrite"),
+    q("b10-7", "Which one global metaphor will I install for the next 10 days?", "Action"),
+  ],
+
+  "ch-11-ten-emotions-of-power": [
+    q("b11-1", "Which Action Signals do I feel most often?", "Signals"),
+    q("b11-2", "For each, what perception or action needs to change?", "Signals"),
+    q("b11-3", "Which of the ten Emotions of Power do I already access easily?", "Power emotions"),
+    q("b11-4", "Which three will I cultivate on purpose this month?", "Power emotions"),
+    q("b11-5", "What physiology helps me shift state fastest?", "Practice"),
+    q("b11-6", "Where am I living in quiet desperation — and what would \"more alive\" look like?", "Practice"),
+    q("b11-7", "How will I create contribution this week as a source of emotion?", "Contribution"),
+  ],
+
+  "ch-12-compelling-future": [
+    q("b12-1", "If I knew I could not fail, what would I attempt?", "Dream"),
+    q("b12-2", "What do I want in personal development, career, finances, adventure, contribution, and relationships?", "Categories"),
+    q("b12-3", "Which goals belong in 1 year? 5? 10? 20?", "Timeline"),
+    q("b12-4", "For my top goals, why must these happen — who else benefits?", "Reasons"),
+    q("b12-5", "If I had already achieved them, how would I feel day to day?", "Emotion"),
+    q("b12-6", "What first massive action can I take in the next 48 hours?", "Action"),
+    q("b12-7", "When will I revisit and upgrade this vision?", "Renewal"),
+  ],
+
+  "ch-13-ten-day-mental-challenge": [
+    q("b13-1", "What unresourceful thought patterns will I refuse to dwell on?", "Setup"),
+    q("b13-2", "What questions will I use as replacements?", "Setup"),
+    q("b13-3", "What physical interrupt will break the pattern?", "Setup"),
+    q("b13-4", "What did I catch today — and how did I transform it?", "During"),
+    q("b13-5", "Where did I almost break the streak, and what saved it?", "During"),
+    q("b13-6", "What new habit of focus did ten clean days create?", "After"),
+    q("b13-7", "What is my maintenance rule after the challenge ends?", "After"),
+  ],
+
+  "ch-14-master-system": [
+    q("b14-1", "In my hardest challenge, what state do I usually enter?", "Map"),
+    q("b14-2", "What questions do I ask myself automatically?", "Map"),
+    q("b14-3", "Which values and rules are being triggered?", "Map"),
+    q("b14-4", "What references (memories/models) am I using?", "Map"),
+    q("b14-5", "Which element, if changed, would transform the whole evaluation?", "Leverage"),
+    q("b14-6", "How could I use this lens to help someone I care about?", "Influence"),
+    q("b14-7", "What Master System would my future self use daily?", "Design"),
+  ],
+
+  "ch-15-life-values": [
+    q("b15-1", "What must I move toward in life? Rank them.", "Toward"),
+    q("b15-2", "What must I move away from? Rank them.", "Away"),
+    q("b15-3", "Where do my values collide in daily decisions?", "Conflict"),
+    q("b15-4", "Which \"goals\" are really means — and what end emotion do I want?", "Means vs ends"),
+    q("b15-5", "Which values did I choose vs. inherit?", "Source"),
+    q("b15-6", "Where would living my top value require courage this week?", "Courage"),
+    q("b15-7", "How will I revisit my values hierarchy quarterly?", "Review"),
+  ],
+
+  "ch-16-rules": [
+    q("b16-1", "For my top value, what currently has to happen for me to feel it?", "Audit"),
+    q("b16-2", "Which of those criteria are outside my control?", "Audit"),
+    q("b16-3", "What new rule would make this value achievable daily?", "Rewrite"),
+    q("b16-4", "What rules do I expect others to follow without having said so?", "Relationships"),
+    q("b16-5", "What rules do I need to ask about — and renegotiate?", "Relationships"),
+    q("b16-6", "Where is \"must\" making my life brittle?", "Language"),
+    q("b16-7", "What rules would make me proud and still free?", "Design"),
+  ],
+
+  "ch-17-references": [
+    q("b17-1", "What experiences most shaped my beliefs about myself?", "Inventory"),
+    q("b17-2", "What references shape my beliefs about money and relationships?", "Inventory"),
+    q("b17-3", "Where do I lack empowering models?", "Gaps"),
+    q("b17-4", "What books, mentors, or adventures would expand my fabric?", "Expansion"),
+    q("b17-5", "What references prove the belief I want to install?", "Belief build"),
+    q("b17-6", "Which old references need a new meaning?", "Reinterpret"),
+    q("b17-7", "What experience will I create as a deliberate new reference?", "Action"),
+  ],
+
+  "ch-18-identity": [
+    q("b18-1", "Who do I believe I am in the areas that matter most?", "Current"),
+    q("b18-2", "Which \"I am\" statements are shrinking my life?", "Limits"),
+    q("b18-3", "Who must I become for my compelling future to feel natural?", "Vision"),
+    q("b18-4", "What references already support that identity?", "Proof"),
+    q("b18-5", "What would that person do in the next 24 hours?", "Action"),
+    q("b18-6", "Where is my identity over-attached to a role or title?", "Roles"),
+    q("b18-7", "How will I reinforce the new identity publicly and privately?", "Declare"),
+  ],
+
+  "ch-19-emotional-destiny": [
+    q("b19-1", "What emotions will I experience every day no matter what?", "Commit"),
+    q("b19-2", "What physiology and focus will create each one?", "Triggers"),
+    q("b19-3", "What is my emotional priming sequence?", "Morning"),
+    q("b19-4", "Which emotions did I live today?", "Evening"),
+    q("b19-5", "When I lost state, how did I recover?", "Repair"),
+    q("b19-6", "What emotional standard am I no longer willing to break?", "Standard"),
+    q("b19-7", "How does emotional mastery support the other destiny days?", "Bridge"),
+  ],
+
+  "ch-20-physical-destiny": [
+    q("b20-1", "What does my physical minimum viable day include?", "Standard"),
+    q("b20-2", "What training do I enjoy enough to sustain?", "Movement"),
+    q("b20-3", "When will I practice deliberate breathing daily?", "Breath"),
+    q("b20-4", "Which three fuel rules increase my vitality?", "Fuel"),
+    q("b20-5", "What physical identity am I claiming?", "Identity"),
+    q("b20-6", "How do I sleep and recover on purpose?", "Recovery"),
+    q("b20-7", "How does my body state affect my emotions and work?", "Link"),
+  ],
+
+  "ch-21-relationship-destiny": [
+    q("b21-1", "Which relationships most shape my daily emotion?", "Map"),
+    q("b21-2", "What do I love about each key person that I haven't said lately?", "Appreciate"),
+    q("b21-3", "Where have I started taking someone for granted?", "Habituation"),
+    q("b21-4", "What new shared moment could renew us?", "Surprise"),
+    q("b21-5", "What conversation would restore connection?", "Repair"),
+    q("b21-6", "How can I contribute without keeping score?", "Give"),
+    q("b21-7", "What is my daily relationship minimum?", "Standard"),
+  ],
+
+  "ch-22-financial-destiny": [
+    q("b22-1", "What conflicting beliefs do I hold about money?", "Beliefs"),
+    q("b22-2", "How can I touch more lives more deeply with what I do?", "Value"),
+    q("b22-3", "Where could distribution multiply the value I create?", "Distribution"),
+    q("b22-4", "What categories and limits will keep me below my means?", "Spending"),
+    q("b22-5", "What is my written investment plan and learning path?", "Investing"),
+    q("b22-6", "How am I protecting assets responsibly?", "Protection"),
+    q("b22-7", "What giving practice teaches my brain abundance?", "Giving"),
+  ],
+
+  "ch-23-code-of-conduct": [
+    q("b23-1", "What states will I be every day no matter what?", "Draft"),
+    q("b23-2", "What proves each state was lived?", "Proof"),
+    q("b23-3", "Which existing codes (personal or cultural) inspire me?", "Models"),
+    q("b23-4", "Which state is hardest when I'm stressed?", "Pressure"),
+    q("b23-5", "How do I recover when I break the code?", "Repair"),
+    q("b23-6", "How does this code express my top values?", "Link"),
+    q("b23-7", "What streak length will I protect first?", "Streak"),
+  ],
+
+  "ch-24-master-time": [
+    q("b24-1", "Where does my time actually go?", "Audit"),
+    q("b24-2", "Does my calendar reflect my values hierarchy?", "Values"),
+    q("b24-3", "What important work keeps losing to urgency?", "Urgent vs important"),
+    q("b24-4", "What destiny blocks will I schedule first?", "Blocks"),
+    q("b24-5", "What will I say no to this week?", "Boundaries"),
+    q("b24-6", "Where do I need deeper presence more than more hours?", "Presence"),
+    q("b24-7", "How will I plan next week on purpose?", "Weekly design"),
+  ],
+
+  "ch-25-rest-and-play": [
+    q("b25-1", "What kind of rest does my nervous system need most?", "Need"),
+    q("b25-2", "What activities make me feel most alive and childlike?", "Play"),
+    q("b25-3", "When is my protected Day Seven time?", "Schedule"),
+    q("b25-4", "Whom do I want to play with?", "People"),
+    q("b25-5", "What story makes me feel I don't deserve rest — and what's truer?", "Guilt"),
+    q("b25-6", "How do I show up after real restoration?", "Aftereffect"),
+    q("b25-7", "What weekly rhythm of push and renew will I keep?", "Rhythm"),
+  ],
+
+  "ch-26-ultimate-challenge": [
+    q("b26-1", "What problem moves me enough to act?", "Spark"),
+    q("b26-2", "Whose example of one-person impact inspires me?", "Story"),
+    q("b26-3", "Where do I have unique skills, access, or credibility?", "Leverage"),
+    q("b26-4", "What contribution project fits the next 90 days?", "90 days"),
+    q("b26-5", "What will I do in 48 hours?", "First step"),
+    q("b26-6", "How will contribution stay on my calendar?", "Sustain"),
+    q("b26-7", "How does serving others complete my personal awakening?", "Meaning"),
+  ],
 };

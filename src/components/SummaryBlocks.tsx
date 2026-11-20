@@ -62,12 +62,15 @@ export function SummaryBlocks({ blocks }: { blocks: SummaryBlock[] }) {
             <section
               key={`big-${index}`}
               aria-labelledby="big"
-              className="flex flex-col gap-3.5 rounded-card bg-brand-dark p-7 text-white sm:p-9"
+              className="flex flex-col gap-4 rounded-card bg-brand-dark px-7 py-8 text-white sm:gap-5 sm:px-10 sm:py-10"
             >
-              <span id="big" className="text-xs font-semibold uppercase tracking-[0.1em] text-brand-mist">
+              <span
+                id="big"
+                className="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-mist"
+              >
                 The big idea
               </span>
-              <p className="m-0 font-display text-[1.5rem] font-semibold leading-[1.35] tracking-tight sm:text-[28px]">
+              <p className="big-idea-text m-0 max-w-[36em] font-reading text-[1.2rem] font-normal leading-[1.65] tracking-[0.01em] text-[#F4F2FB] sm:text-[1.375rem] sm:leading-[1.7]">
                 {block.text}
               </p>
             </section>

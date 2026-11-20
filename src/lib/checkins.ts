@@ -1,14 +1,22 @@
 import { sql } from "@/lib/db";
 import { listLibraryBooks, resolveChapter, type LibraryAccess } from "@/lib/library";
 import { LIMITS, clampText } from "@/lib/limits";
+import {
+  formatDeadlineLabel,
+  parseDeadlineDate,
+  toDateInputValue,
+} from "@/lib/deadlines";
 import type {
   AnswerMap,
   AnswerRow,
   Cadence,
+  ChapterSettings,
   CheckInRow,
   CommitmentRow,
   Question,
 } from "@/lib/types";
+
+export { formatDeadlineLabel, parseDeadlineDate, toDateInputValue };
 
 export function cadenceDays(cadence: Cadence): number {
   if (cadence === "monthly") return 30;
@@ -20,9 +28,9 @@ export async function getOrCreateSettings(
   ownerSub: string,
   bookId: string,
   chapterId: string,
-): Promise<{ cadence: Cadence; status: string }> {
-  const existing = await sql<{ cadence: Cadence; status: string }>(
-    `select cadence, status from chapter_settings
+): Promise<ChapterSettings> {
+  const existing = await sql<ChapterSettings>(
+    `select cadence, status, next_deadline_at from chapter_settings
      where owner_sub = $1 and book_id = $2 and chapter_id = $3`,
     [ownerSub, bookId, chapterId],
   );
@@ -33,7 +41,7 @@ export async function getOrCreateSettings(
      on conflict (owner_sub, book_id, chapter_id) do nothing`,
     [ownerSub, bookId, chapterId],
   );
-  return { cadence: "weekly", status: "in_progress" };
+  return { cadence: "weekly", status: "in_progress", next_deadline_at: null };
 }
 
 export async function setCadence(
@@ -49,6 +57,23 @@ export async function setCadence(
      where owner_sub = $1 and book_id = $2 and chapter_id = $3`,
     [ownerSub, bookId, chapterId, cadence],
   );
+}
+
+/** Persist a user-picked finish-by date for this chapter’s next action check-in. */
+export async function setNextDeadline(
+  ownerSub: string,
+  bookId: string,
+  chapterId: string,
+  deadlineIso: string | null,
+): Promise<ChapterSettings> {
+  await getOrCreateSettings(ownerSub, bookId, chapterId);
+  await sql(
+    `update chapter_settings
+     set next_deadline_at = $4, updated_at = now()
+     where owner_sub = $1 and book_id = $2 and chapter_id = $3`,
+    [ownerSub, bookId, chapterId, deadlineIso],
+  );
+  return getOrCreateSettings(ownerSub, bookId, chapterId);
 }
 
 export async function getLatestCheckIn(
@@ -229,12 +254,28 @@ export async function submitCheckIn(
     throw new Error("Check-in not submittable");
   }
 
+  const settings = await getOrCreateSettings(
+    ownerSub,
+    checkIn.book_id,
+    checkIn.chapter_id,
+  );
+
+  // Snapshot the user-set deadline onto this check-in for weekly/monthly/quarterly comparisons.
+  let periodDeadline = settings.next_deadline_at
+    ? new Date(settings.next_deadline_at)
+    : new Date();
+  if (Number.isNaN(periodDeadline.getTime())) periodDeadline = new Date();
+
   const updated = await sql<CheckInRow>(
     `update check_ins
-     set status = 'submitted', submitted_at = now(), updated_at = now()
+     set status = 'submitted',
+         submitted_at = now(),
+         deadline_at = $2,
+         cadence = $3,
+         updated_at = now()
      where id = $1
      returning *`,
-    [checkInId],
+    [checkInId, periodDeadline.toISOString(), settings.cadence],
   );
 
   const chapter = await resolveChapter(access, checkIn.book_id, checkIn.chapter_id);
@@ -243,22 +284,33 @@ export async function submitCheckIn(
     const answers = await getAnswersMap(checkInId);
     const text = answers[commitmentQuestion.id]?.valueText?.trim();
     if (text) {
-      const due = new Date();
-      due.setDate(due.getDate() + cadenceDays(checkIn.cadence));
       await sql(
         `insert into commitments
           (owner_sub, book_id, chapter_id, check_in_id, text, status, due_at)
          values ($1, $2, $3, $4, $5, 'open', $6)`,
-        [ownerSub, checkIn.book_id, checkIn.chapter_id, checkInId, text, due.toISOString()],
+        [
+          ownerSub,
+          checkIn.book_id,
+          checkIn.chapter_id,
+          checkInId,
+          text,
+          periodDeadline.toISOString(),
+        ],
       );
     }
   }
 
+  // Roll the next deadline forward by the chapter cadence so the calendar stays useful.
+  const nextDeadline = new Date(periodDeadline);
+  nextDeadline.setUTCDate(nextDeadline.getUTCDate() + cadenceDays(settings.cadence));
+
   await sql(
     `update chapter_settings
-     set status = 'in_progress', updated_at = now()
+     set status = 'in_progress',
+         next_deadline_at = $4,
+         updated_at = now()
      where owner_sub = $1 and book_id = $2 and chapter_id = $3`,
-    [ownerSub, checkIn.book_id, checkIn.chapter_id],
+    [ownerSub, checkIn.book_id, checkIn.chapter_id, nextDeadline.toISOString()],
   );
 
   return updated[0];
@@ -299,8 +351,10 @@ export async function getDueCheckIns(access: LibraryAccess) {
     chapter_id: string;
     cadence: Cadence;
     status: string;
+    next_deadline_at: string | null;
   }>(
-    `select book_id, chapter_id, cadence, status from chapter_settings where owner_sub = $1`,
+    `select book_id, chapter_id, cadence, status, next_deadline_at
+     from chapter_settings where owner_sub = $1`,
     [ownerSub],
   );
   const byKey = new Map(settings.map((s) => [`${s.book_id}:${s.chapter_id}`, s]));
@@ -313,7 +367,11 @@ export async function getDueCheckIns(access: LibraryAccess) {
       const hasSetting = byKey.has(key);
       // Keep the due list focused: early chapters, or anything the reader has touched.
       if (!hasSetting && chapter.number > 3) continue;
-      const setting = byKey.get(key) ?? { cadence: "weekly" as Cadence, status: "not_started" };
+      const setting = byKey.get(key) ?? {
+        cadence: "weekly" as Cadence,
+        status: "not_started",
+        next_deadline_at: null as string | null,
+      };
       const latestSubmitted = await sql<CheckInRow>(
         `select * from check_ins
          where owner_sub = $1 and book_id = $2 and chapter_id = $3 and status = 'submitted'
@@ -322,7 +380,10 @@ export async function getDueCheckIns(access: LibraryAccess) {
       );
       const last = latestSubmitted[0];
       let dueDate: Date;
-      if (!last?.submitted_at) {
+      if (setting.next_deadline_at) {
+        // Prefer the calendar date the reader picked.
+        dueDate = new Date(setting.next_deadline_at);
+      } else if (!last?.submitted_at) {
         dueDate = new Date();
         if (chapter.number > 2) {
           dueDate.setDate(dueDate.getDate() + (chapter.number - 2) * 7);
@@ -343,6 +404,7 @@ export async function getDueCheckIns(access: LibraryAccess) {
         title: chapter.shortTitle,
         cadence: setting.cadence,
         dueDate: due.toISOString(),
+        deadlineSet: Boolean(setting.next_deadline_at),
         diffDays,
         urgency: diffDays <= 0 ? "due" : diffDays === 1 ? "soon" : "later",
       });

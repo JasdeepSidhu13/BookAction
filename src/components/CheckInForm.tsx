@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { formatDeadlineLabel } from "@/lib/deadlines";
 import type { AnswerMap, Cadence, Question } from "@/lib/types";
 
 type Props = {
@@ -17,17 +18,19 @@ type Props = {
   previousDateLabel?: string | null;
   lastCommitment?: string | null;
   initialCadence: Cadence;
+  /** YYYY-MM-DD for the calendar input */
+  initialDeadline: string;
   chapterScore: number | null;
   chapterDelta: number | null;
   sparkline: number[];
   fromChapterNote: string;
-  nextCheckInLabel: string;
 };
 
 export function CheckInForm(props: Props) {
   const router = useRouter();
   const [answers, setAnswers] = useState<AnswerMap>(props.initialAnswers);
   const [cadence, setCadence] = useState<Cadence>(props.initialCadence);
+  const [deadline, setDeadline] = useState(props.initialDeadline);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [pending, startTransition] = useTransition();
   const skipFirstAutosave = useRef(true);
@@ -65,6 +68,7 @@ export function CheckInForm(props: Props) {
           bookId: props.bookId,
           chapterId: props.chapterId,
           cadence,
+          deadline: deadline || null,
           answers,
           mode,
         }),
@@ -89,6 +93,21 @@ export function CheckInForm(props: Props) {
         bookId: props.bookId,
         chapterId: props.chapterId,
         cadence: next,
+        deadline: deadline || null,
+      }),
+    });
+  }
+
+  async function updateDeadline(next: string) {
+    setDeadline(next);
+    await fetch("/api/check-ins", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        bookId: props.bookId,
+        chapterId: props.chapterId,
+        cadence,
+        deadline: next || null,
       }),
     });
   }
@@ -336,6 +355,24 @@ export function CheckInForm(props: Props) {
           </div>
         </div>
 
+        <div className="flex flex-col gap-2.5 rounded-panel border border-line bg-white p-6">
+          <label htmlFor="action-deadline" className="text-[13px] font-semibold uppercase tracking-[0.08em] text-muted">
+            Finish by
+          </label>
+          <input
+            id="action-deadline"
+            type="date"
+            value={deadline}
+            min={new Date().toISOString().slice(0, 10)}
+            onChange={(e) => void updateDeadline(e.target.value)}
+            className="h-12 rounded-control border border-line2 bg-canvas px-3.5 text-[15px] font-medium text-ink"
+          />
+          <p className="m-0 text-[13px] leading-[1.5] text-soft">
+            Pick a calendar date for this action. It is saved with each{" "}
+            {cadence} check-in so you can compare responses over time.
+          </p>
+        </div>
+
         <div className="flex flex-col gap-3.5 rounded-panel border border-line bg-white p-6">
           <span className="text-[13px] font-semibold uppercase tracking-[0.08em] text-muted">Chapter score</span>
           <div className="flex items-baseline gap-2.5">
@@ -361,9 +398,15 @@ export function CheckInForm(props: Props) {
         </div>
 
         <div className="flex flex-col gap-1.5 rounded-panel border border-line bg-white p-6">
-          <span className="text-[13px] font-medium text-muted">Next check-in</span>
-          <span className="text-[17px] font-semibold">{props.nextCheckInLabel}</span>
-          <span className="text-[13px] text-soft">Based on your {cadence} cadence.</span>
+          <span className="text-[13px] font-medium text-muted">Deadline</span>
+          <span className="text-[17px] font-semibold">
+            {deadline ? formatDeadlineLabel(`${deadline}T12:00:00.000Z`) : "Choose a date"}
+          </span>
+          <span className="text-[13px] text-soft">
+            {deadline
+              ? `Saved for ${cadence} comparison · rolls forward after submit`
+              : `Set a finish-by date for this ${cadence} action`}
+          </span>
         </div>
       </aside>
     </div>

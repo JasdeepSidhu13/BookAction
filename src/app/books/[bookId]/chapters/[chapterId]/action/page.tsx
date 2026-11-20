@@ -10,7 +10,9 @@ import {
   getOrCreateSettings,
   getPreviousSubmittedAnswers,
   listOpenCommitments,
+  setNextDeadline,
 } from "@/lib/checkins";
+import { parseDeadlineDate, toDateInputValue } from "@/lib/deadlines";
 import { resolveChapter } from "@/lib/library";
 import { computeProgress } from "@/lib/progress";
 import { getViewer } from "@/lib/viewer";
@@ -30,7 +32,16 @@ export default async function ActionCheckInPage({
   const { book, chapter } = data;
 
   const draft = await ensureDraftCheckIn(viewer.sub, bookId, chapterId);
-  const settings = await getOrCreateSettings(viewer.sub, bookId, chapterId);
+  let settings = await getOrCreateSettings(viewer.sub, bookId, chapterId);
+  // Seed a calendar deadline if the reader has not picked one yet.
+  if (!settings.next_deadline_at) {
+    const suggested = new Date();
+    suggested.setUTCDate(suggested.getUTCDate() + cadenceDays(settings.cadence));
+    const seeded = parseDeadlineDate(suggested.toISOString().slice(0, 10));
+    if (seeded) {
+      settings = await setNextDeadline(viewer.sub, bookId, chapterId, seeded);
+    }
+  }
   const answers = await getAnswersMap(draft.id);
   const previous = await getPreviousSubmittedAnswers(viewer.sub, bookId, chapterId, draft.id);
   const first = await getFirstSubmittedAnswers(viewer.sub, bookId, chapterId);
@@ -55,20 +66,26 @@ export default async function ActionCheckInPage({
       ? insightBlock.text
       : "A real decision cuts off every other option. Is there a back door you're keeping open?";
 
-  const next = new Date();
-  next.setDate(next.getDate() + cadenceDays(settings.cadence));
-  const nextCheckInLabel = next.toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "short",
-    day: "numeric",
-  });
-
-  const previousDateLabel = previous?.checkIn.submitted_at
-    ? new Date(previous.checkIn.submitted_at).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-      })
+  const previousDateLabel = previous?.checkIn
+    ? [
+        previous.checkIn.submitted_at
+          ? new Date(previous.checkIn.submitted_at).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+            })
+          : null,
+        previous.checkIn.deadline_at
+          ? `due ${new Date(previous.checkIn.deadline_at).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+            })}`
+          : null,
+      ]
+        .filter(Boolean)
+        .join(" · ")
     : null;
+
+  const initialDeadline = toDateInputValue(settings.next_deadline_at);
 
   return (
     <div className="min-h-screen bg-canvas text-ink">
@@ -145,11 +162,11 @@ export default async function ActionCheckInPage({
           previousDateLabel={previousDateLabel}
           lastCommitment={lastCommitment}
           initialCadence={settings.cadence}
+          initialDeadline={initialDeadline}
           chapterScore={chapterStat?.latest ?? null}
           chapterDelta={chapterStat?.delta ?? null}
           sparkline={chapterSpark}
           fromChapterNote={fromChapterNote}
-          nextCheckInLabel={nextCheckInLabel}
         />
       </div>
     </div>

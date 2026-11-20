@@ -6,6 +6,7 @@ import {
   persistGeneratedBook,
 } from "@/lib/generateBook";
 import { LIMITS, clampText } from "@/lib/limits";
+import { resolveOpenAiKey, serverHasOpenAiKey } from "@/lib/llmExtract";
 import { allowRequest } from "@/lib/rateLimit";
 import { requireIdentity } from "../../../../../cursor/identity";
 
@@ -25,7 +26,7 @@ export async function POST(request: Request) {
 
   let form: FormData;
   try {
-    form = await request.formData();
+    form = await formDataSafe(request);
   } catch {
     return NextResponse.json({ error: "invalid_form" }, { status: 400 });
   }
@@ -46,6 +47,23 @@ export async function POST(request: Request) {
 
   const titleHint = clampText(String(form.get("title") ?? ""), LIMITS.bookTitle);
   const authorHint = clampText(String(form.get("author") ?? ""), LIMITS.bookAuthor);
+  const modeRaw = String(form.get("mode") ?? "auto").toLowerCase();
+  const preferLlm = modeRaw !== "heuristic";
+  // Visitor-supplied key is request-scoped only — never logged or persisted.
+  const visitorKey = String(form.get("openaiApiKey") ?? "");
+
+  if (preferLlm && modeRaw === "ai") {
+    const key = resolveOpenAiKey(visitorKey);
+    if (!key) {
+      return NextResponse.json(
+        {
+          error: "ai_key_required",
+          serverHasKey: serverHasOpenAiKey(),
+        },
+        { status: 400 },
+      );
+    }
+  }
 
   try {
     const { text, kind } = await extractTextFromUpload(file);
@@ -54,7 +72,16 @@ export async function POST(request: Request) {
       filename: file.name,
       titleHint: titleHint || undefined,
       authorHint: authorHint || undefined,
+      preferLlm,
+      openAiApiKey: visitorKey || null,
     });
+
+    if (modeRaw === "ai" && generated.mode !== "llm") {
+      return NextResponse.json(
+        { error: "ai_extract_failed", serverHasKey: serverHasOpenAiKey() },
+        { status: 502 },
+      );
+    }
 
     const bookId = newUserBookId(identity.sub, generated.title);
     await persistGeneratedBook({
@@ -81,6 +108,7 @@ export async function POST(request: Request) {
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : "upload_failed";
+    // Never include request secrets in logs.
     console.error("book_upload_failed", message);
     const status =
       message === "file_too_large"
@@ -93,4 +121,8 @@ export async function POST(request: Request) {
           : 500;
     return NextResponse.json({ error: message, detail: message }, { status });
   }
+}
+
+async function formDataSafe(request: Request): Promise<FormData> {
+  return request.formData();
 }

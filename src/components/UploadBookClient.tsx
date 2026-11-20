@@ -8,14 +8,22 @@ type Props = {
   viewerName: string;
   simulated: boolean;
   verified: boolean;
+  serverHasOpenAiKey: boolean;
 };
 
-export function UploadBookClient({ viewerName, simulated, verified }: Props) {
+export function UploadBookClient({
+  viewerName,
+  simulated,
+  verified,
+  serverHasOpenAiKey,
+}: Props) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
   const [author, setAuthor] = useState("");
+  const [mode, setMode] = useState<"ai" | "heuristic">("ai");
+  const [visitorKey, setVisitorKey] = useState("");
   const [dragOver, setDragOver] = useState(false);
   const [status, setStatus] = useState<string>("");
   const [busy, setBusy] = useState(false);
@@ -54,14 +62,26 @@ export function UploadBookClient({ viewerName, simulated, verified }: Props) {
       inputRef.current?.click();
       return;
     }
+    if (mode === "ai" && !serverHasOpenAiKey && !visitorKey.trim()) {
+      setStatus("Add an OpenAI API key below, or switch to Fast local extract.");
+      return;
+    }
     setBusy(true);
-    setStatus("Reading PDF and extracting chapter summaries + action questions…");
+    setStatus(
+      mode === "ai"
+        ? "Reading PDF and generating chapter summaries with AI…"
+        : "Reading PDF and extracting with the local heuristic…",
+    );
     setResult(null);
     try {
       const body = new FormData();
       body.set("file", file);
+      body.set("mode", mode === "ai" ? "ai" : "heuristic");
       if (title.trim()) body.set("title", title.trim());
       if (author.trim()) body.set("author", author.trim());
+      if (mode === "ai" && !serverHasOpenAiKey && visitorKey.trim()) {
+        body.set("openaiApiKey", visitorKey.trim());
+      }
       const res = await fetch("/api/books/upload", { method: "POST", body });
       let data: {
         error?: string;
@@ -88,7 +108,9 @@ export function UploadBookClient({ viewerName, simulated, verified }: Props) {
       }
       setResult(data.book);
       setStatus(
-        `Extracted ${data.book.chapterCount} chapters with summaries and action questions.`,
+        data.book.generationMode === "llm"
+          ? `AI extracted ${data.book.chapterCount} chapters with summaries and action questions.`
+          : `Extracted ${data.book.chapterCount} chapters locally (heuristic).`,
       );
       setBusy(false);
       if (data.book.firstChapterId) {
@@ -111,10 +133,9 @@ export function UploadBookClient({ viewerName, simulated, verified }: Props) {
           Upload a PDF
         </h1>
         <p className="m-0 text-[15px] leading-[1.6] text-soft">
-          Upload any book PDF. Chapterwise detects chapters (or splits the book into 5–7 sections
-          when markers are missing), drafts summaries from the text, and builds Action + Question
-          Bank prompts — locally, with no API. Text-based PDFs work best. Saved privately for{" "}
-          {viewerName}.
+          Prefer AI extraction for faithful summaries (OpenAI). Anyone signed into this
+          app can use the owner’s bound key, or paste their own key for this upload only —
+          it is never stored. Saved privately for {viewerName}.
         </p>
       </div>
 
@@ -179,6 +200,61 @@ export function UploadBookClient({ viewerName, simulated, verified }: Props) {
           </button>
         </div>
 
+        <fieldset className="m-0 flex flex-col gap-3 border-0 p-0">
+          <legend className="px-0 text-[13px] font-medium text-muted">Extraction</legend>
+          <label className="flex cursor-pointer items-start gap-3 rounded-[14px] border border-line p-3.5">
+            <input
+              type="radio"
+              name="mode"
+              checked={mode === "ai"}
+              onChange={() => setMode("ai")}
+              className="mt-1"
+            />
+            <span className="flex flex-col gap-0.5">
+              <span className="text-[15px] font-semibold text-ink">AI extract (recommended)</span>
+              <span className="text-[13px] text-soft">
+                OpenAI drafts big idea, key ideas, apply steps, and questions from the text.
+                {serverHasOpenAiKey
+                  ? " This app already has a key configured."
+                  : " Paste your OpenAI key below for this upload."}
+              </span>
+            </span>
+          </label>
+          <label className="flex cursor-pointer items-start gap-3 rounded-[14px] border border-line p-3.5">
+            <input
+              type="radio"
+              name="mode"
+              checked={mode === "heuristic"}
+              onChange={() => setMode("heuristic")}
+              className="mt-1"
+            />
+            <span className="flex flex-col gap-0.5">
+              <span className="text-[15px] font-semibold text-ink">Fast local extract</span>
+              <span className="text-[13px] text-soft">
+                No API call. Splits into chapters/sections with heuristic summaries.
+              </span>
+            </span>
+          </label>
+        </fieldset>
+
+        {mode === "ai" && !serverHasOpenAiKey ? (
+          <label className="flex flex-col gap-1.5 text-[13px] font-medium text-muted">
+            Your OpenAI API key (this upload only)
+            <input
+              type="password"
+              autoComplete="off"
+              value={visitorKey}
+              onChange={(e) => setVisitorKey(e.target.value)}
+              className="h-11 rounded-chip border border-line2 bg-white px-4 text-sm text-ink"
+              placeholder="sk-…"
+            />
+            <span className="text-[12px] font-normal text-muted">
+              Sent once with this upload, never saved. Or ask the app owner to bind{" "}
+              <code className="text-ink">OPENAI_API_KEY</code> in Secrets.
+            </span>
+          </label>
+        ) : null}
+
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <label className="flex flex-col gap-1.5 text-[13px] font-medium text-muted">
             Title (optional)
@@ -205,13 +281,20 @@ export function UploadBookClient({ viewerName, simulated, verified }: Props) {
           disabled={busy || !file}
           className="inline-flex h-12 items-center justify-center rounded-chip bg-brand px-5 text-sm font-semibold text-white disabled:opacity-60"
         >
-          {busy ? "Extracting summaries & actions…" : "Upload PDF & extract"}
+          {busy
+            ? mode === "ai"
+              ? "AI extracting…"
+              : "Extracting…"
+            : mode === "ai"
+              ? "Upload & AI extract"
+              : "Upload & extract locally"}
         </button>
 
         {status ? <p className="m-0 text-sm text-soft">{status}</p> : null}
         {result ? (
           <p className="m-0 text-sm font-medium text-ink">
-            Ready: {result.title} · {result.chapterCount} chapters.{" "}
+            Ready: {result.title} · {result.chapterCount} chapters ·{" "}
+            {result.generationMode === "llm" ? "AI" : "local"}.{" "}
             <Link
               href={`/books/${result.id}/chapters/${result.firstChapterId}`}
               className="text-brand"
@@ -223,19 +306,23 @@ export function UploadBookClient({ viewerName, simulated, verified }: Props) {
       </form>
 
       <section className="flex flex-col gap-3 rounded-panel border border-line bg-white p-6">
-        <h2 className="m-0 font-display text-xl font-bold">What gets extracted</h2>
+        <h2 className="m-0 font-display text-xl font-bold">Who can use AI extract?</h2>
         <ul className="m-0 flex list-disc flex-col gap-2 pl-5 text-[15px] leading-[1.55] text-soft">
           <li>
-            <strong className="font-semibold text-ink">Summary:</strong> big idea, key ideas, insight,
-            and apply-it steps per chapter.
+            <strong className="font-semibold text-ink">You (with Cursor):</strong> bind{" "}
+            <code className="text-ink">OPENAI_API_KEY</code> once in app Secrets — every
+            signed-in visitor then gets AI quality without pasting a key.
           </li>
           <li>
-            <strong className="font-semibold text-ink">Actions:</strong> recurring check-in questions
-            plus a full Question Bank (including questions found in the PDF when present).
+            <strong className="font-semibold text-ink">Another Cursor user:</strong> sign in
+            to this Private/Team app and upload; they share your bound key, or paste their own.
           </li>
           <li>
-            <strong className="font-semibold text-ink">Storage:</strong> saved in your private Postgres
-            library under your Cursor identity for Progress insights over time.
+            <strong className="font-semibold text-ink">Someone without Cursor:</strong> Cursor
+            Private/Team apps require Cursor sign-in. They can create a free Cursor account to
+            open the app, or paste their own OpenAI key after you invite them. Talking to an
+            agent in chat is only for you during builds — the live app uses OpenAI (or local
+            extract) instead.
           </li>
         </ul>
         {!verified && !simulated ? (
@@ -271,6 +358,10 @@ function errorMessage(code: string | undefined): string {
       return "Choose a PDF file first.";
     case "rate_limited":
       return "Too many uploads this hour. Try again later.";
+    case "ai_key_required":
+      return "AI extract needs an OpenAI key — paste yours, or bind OPENAI_API_KEY in Secrets.";
+    case "ai_extract_failed":
+      return "AI extract failed (key, quota, or model). Check the key or try Fast local extract.";
     default:
       return code
         ? `Upload failed (${code}). Try again with a PDF under 12 MB.`

@@ -1,12 +1,14 @@
 import { AppHeader } from "@/components/AppHeader";
 import { SignInBanner } from "@/components/SignInBanner";
 import { UploadBookClient } from "@/components/UploadBookClient";
+import { serverHasOpenAiKey } from "@/lib/llmExtract";
 import { getViewer } from "@/lib/viewer";
 
 export const dynamic = "force-dynamic";
 
 export default async function UploadPage() {
   const viewer = await getViewer();
+  const hasAi = serverHasOpenAiKey();
 
   if (!viewer.verified) {
     return (
@@ -17,7 +19,7 @@ export default async function UploadPage() {
             <h1 className="m-0 font-display text-4xl font-bold tracking-tight">Add a book</h1>
             <p className="m-0 text-[15px] text-soft">
               Uploads are saved to your Cursor account so Progress and Question Bank
-              stay private to you.
+              stay private to you. AI extract uses OpenAI once you are signed in.
             </p>
           </div>
           <SignInBanner />
@@ -39,6 +41,7 @@ export default async function UploadPage() {
         viewerName={viewer.name}
         simulated={viewer.simulated}
         verified={viewer.verified}
+        serverHasOpenAiKey={hasAi}
       />
     </div>
   );

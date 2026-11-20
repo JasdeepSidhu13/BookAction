@@ -103,9 +103,17 @@ export type CheckInRow = {
   cadence: Cadence;
   status: "draft" | "submitted";
   check_in_number: number;
+  /** User-set finish-by date for this check-in period (for cadence comparisons). */
+  deadline_at: string | null;
   submitted_at: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type ChapterSettings = {
+  cadence: Cadence;
+  status: string;
+  next_deadline_at: string | null;
 };
 
 export type AnswerRow = {

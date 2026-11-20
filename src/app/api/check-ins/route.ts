@@ -3,8 +3,10 @@ import {
   ensureDraftCheckIn,
   saveAnswers,
   setCadence,
+  setNextDeadline,
   submitCheckIn,
 } from "@/lib/checkins";
+import { parseDeadlineDate } from "@/lib/deadlines";
 import { accessFromPerson, isAccessibleBookChapter } from "@/lib/library";
 import type { AnswerMap, Cadence } from "@/lib/types";
 import { requireIdentity } from "../../../../cursor/identity";
@@ -24,6 +26,7 @@ export async function POST(request: Request) {
     bookId: string;
     chapterId: string;
     cadence?: Cadence;
+    deadline?: string | null;
     answers: AnswerMap;
     mode: "draft" | "submit";
   };
@@ -39,6 +42,16 @@ export async function POST(request: Request) {
 
   if (body.cadence) {
     await setCadence(identity.sub, body.bookId, body.chapterId, body.cadence);
+  }
+  if (body.deadline !== undefined) {
+    const parsed =
+      body.deadline === null || body.deadline === ""
+        ? null
+        : parseDeadlineDate(body.deadline);
+    if (body.deadline && !parsed) {
+      return NextResponse.json({ error: "invalid_deadline" }, { status: 400 });
+    }
+    await setNextDeadline(identity.sub, body.bookId, body.chapterId, parsed);
   }
 
   await saveAnswers(identity.sub, draft.id, body.answers ?? {});
@@ -68,14 +81,33 @@ export async function PATCH(request: Request) {
   const body = (await request.json()) as {
     bookId: string;
     chapterId: string;
-    cadence: Cadence;
+    cadence?: Cadence;
+    deadline?: string | null;
   };
   if (!(await isAccessibleBookChapter(access, body.bookId, body.chapterId))) {
     return NextResponse.json({ error: "unknown_chapter" }, { status: 400 });
   }
-  await setCadence(identity.sub, body.bookId, body.chapterId, body.cadence);
+  if (body.cadence) {
+    await setCadence(identity.sub, body.bookId, body.chapterId, body.cadence);
+  }
+  let settings = null;
+  if (body.deadline !== undefined) {
+    const parsed =
+      body.deadline === null || body.deadline === ""
+        ? null
+        : parseDeadlineDate(body.deadline);
+    if (body.deadline && !parsed) {
+      return NextResponse.json({ error: "invalid_deadline" }, { status: 400 });
+    }
+    settings = await setNextDeadline(
+      identity.sub,
+      body.bookId,
+      body.chapterId,
+      parsed,
+    );
+  }
   return NextResponse.json(
-    { ok: true },
+    { ok: true, settings },
     { headers: { "cache-control": "private, no-store" } },
   );
 }

@@ -7,12 +7,12 @@ export const ch6: Omit<Chapter, "bankQuestions"> = {
   shortTitle: "Make It Easy",
   part: "The 3rd Law",
   teaser:
-    "Reduce friction. Use the Two-Minute Rule so starting is so easy you cannot talk yourself out of it.",
-  readMinutes: 11,
+    "Walk slowly but never backward — Law of Least Effort, Two-Minute Rule, and commitment devices.",
+  readMinutes: 12,
   summary: [
     {
       type: "bigIdea",
-      text: "Human behavior follows the Law of Least Effort. Make the good habit the easy option — and the bad habit the hard one. Master the art of showing up with the Two-Minute Rule.",
+      text: "When you start a new habit, it should take less than two minutes to do. “Read before bed” becomes “read one page.” “Run three miles” becomes “tie my running shoes.” Standardize before you optimize.",
     },
     {
       type: "toc",
@@ -32,19 +32,19 @@ export const ch6: Omit<Chapter, "bankQuestions"> = {
       ideas: [
         {
           title: "Motion vs action",
-          body: "Planning, researching, and outlining can be motion. Action is the behavior that delivers an outcome.",
+          body: "Planning and researching can be motion. Action is the behavior that delivers an outcome. Walk slowly, but never backward — keep taking real steps.",
         },
         {
-          title: "Reduce friction",
-          body: "Prep the environment so the next action requires almost no setup — gym bag by the door, book on the pillow.",
-        },
-        {
-          title: "Increase friction for bad habits",
-          body: "Add steps, delays, and distance. Make the unwanted behavior inconvenient.",
+          title: "Law of Least Effort",
+          body: "Human behavior follows the path of least resistance. Reduce friction for good habits; add friction for bad ones.",
         },
         {
           title: "Two-Minute Rule",
-          body: "When you start a new habit, it should take less than two minutes to do. Scale down until starting is automatic.",
+          body: "Scale the habit down until starting is automatic. Anyone can open notes, take out a yoga mat, or fold one pair of socks.",
+        },
+        {
+          title: "Commitment devices",
+          body: "Make good habits inevitable and bad habits impossible — pack the bag tonight, block the site, auto-pay the class.",
         },
       ],
     },
@@ -57,17 +57,17 @@ export const ch6: Omit<Chapter, "bankQuestions"> = {
       items: [
         {
           title: "Gateway habit",
-          body: "“Read before bed” becomes “read one page.” Start so small you always begin.",
+          body: "Start so small you always begin — then let continuation take over.",
           icon: "action",
         },
         {
           title: "Prime the environment",
-          body: "Set out tools in advance so the habit is already half done.",
+          body: "Set tools out in advance so the habit is already half done.",
           icon: "focus",
         },
         {
-          title: "Commitment devices",
-          body: "Future-proof good behavior — auto-pay, blocked sites, a packed lunch waiting.",
+          title: "Add steps to bad habits",
+          body: "Distance, delay, and inconvenience are features — not bugs.",
           icon: "meaning",
         },
       ],
@@ -75,7 +75,7 @@ export const ch6: Omit<Chapter, "bankQuestions"> = {
     {
       type: "insight",
       id: "insight",
-      text: "Standardize before you optimize. You have to standardize a habit before you can improve it — walk before you run.",
+      text: "A new habit should not feel like a challenge. The actions that follow can be challenging, but the first two minutes should be easy.",
     },
     {
       type: "apply",
@@ -84,7 +84,7 @@ export const ch6: Omit<Chapter, "bankQuestions"> = {
       accent: "#166534",
       items: [
         "Shrink your key habit to a two-minute version for the next seven days.",
-        "Remove two minutes of friction from that habit’s setup.",
+        "Remove two minutes of setup friction from that habit.",
         "Add two minutes of friction to one bad habit you want less of.",
       ],
     },

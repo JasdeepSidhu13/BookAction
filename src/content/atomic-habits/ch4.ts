@@ -7,12 +7,12 @@ export const ch4: Omit<Chapter, "bankQuestions"> = {
   shortTitle: "Make It Obvious",
   part: "The 1st Law",
   teaser:
-    "Implementation intentions, habit stacking, and environment design beat vague motivation.",
-  readMinutes: 11,
+    "Implementation intentions, habit stacking, and environment design — clarity beats vague motivation.",
+  readMinutes: 12,
   summary: [
     {
       type: "bigIdea",
-      text: "Many people think they lack motivation when what they lack is clarity. Make the cue for your habit so obvious that doing the right thing becomes the path of least attention.",
+      text: "Many people think they lack motivation when what they lack is clarity. Decide the when and where beforehand — “When situation X arises, I will perform response Y” — and design an environment where the good cue is hard to miss.",
     },
     {
       type: "toc",
@@ -31,20 +31,20 @@ export const ch4: Omit<Chapter, "bankQuestions"> = {
       accent: "#3730A3",
       ideas: [
         {
-          title: "Pointing-and-calling awareness",
-          body: "You cannot change what you do not notice. Score your habits honestly before you redesign them.",
+          title: "Awareness before change",
+          body: "Pointing-and-calling (and a habit scorecard) make invisible routines visible. You can’t improve what you don’t notice.",
         },
         {
           title: "Implementation intentions",
-          body: "I will [BEHAVIOR] at [TIME] in [LOCATION]. Specificity removes negotiation.",
+          body: "I will [BEHAVIOR] at [TIME] in [LOCATION]. Time and place are the two most common cues — lock both in advance.",
         },
         {
           title: "Habit stacking",
-          body: "After [CURRENT HABIT], I will [NEW HABIT]. Attach the new cue to something you already do.",
+          body: "After [CURRENT HABIT], I will [NEW HABIT]. Tie the new cue to something you already do reliably — coffee, commute, brushing teeth.",
         },
         {
           title: "Environment is the invisible hand",
-          body: "Make cues for good habits visible and cues for bad habits invisible. Redesign spaces, not just willpower.",
+          body: "Motivation is overrated; environment often matters more. Make good cues obvious and bad cues invisible. One space, one use.",
         },
       ],
     },
@@ -62,12 +62,12 @@ export const ch4: Omit<Chapter, "bankQuestions"> = {
         },
         {
           title: "Stack on a stable habit",
-          body: "Coffee, commute, brushing teeth — reliable anchors beat vague hopes.",
+          body: "Reliable anchors beat vague hopes every time.",
           icon: "action",
         },
         {
-          title: "One space, one purpose",
-          body: "Context matters. Mixing cues (bed = sleep + phone) confuses the brain.",
+          title: "Self-control by design",
+          body: "The secret of self-control is often fewer tempting cues — not more willpower in the moment.",
           icon: "meaning",
         },
       ],
@@ -75,7 +75,7 @@ export const ch4: Omit<Chapter, "bankQuestions"> = {
     {
       type: "insight",
       id: "insight",
-      text: "Motivation is overrated; environment often matters more. Self-control is a short-term strategy — design is a long-term one.",
+      text: "Self-control is a short-term strategy. Design is a long-term one. People with great self-control tend to spend less time in tempting situations in the first place.",
     },
     {
       type: "apply",
@@ -85,7 +85,7 @@ export const ch4: Omit<Chapter, "bankQuestions"> = {
       items: [
         "Write one implementation intention: I will ___ at ___ in ___.",
         "Create one habit stack using a daily anchor you never skip.",
-        "Remove or hide one cue for a bad habit in your primary environment.",
+        "Hide or remove one cue for a bad habit in your primary environment.",
       ],
     },
     {
@@ -97,12 +97,12 @@ export const ch4: Omit<Chapter, "bankQuestions"> = {
       items: [
         {
           title: "Vague intentions",
-          body: "“Work out more” without time, place, or trigger.",
+          body: "“Work out more” with no time, place, or trigger.",
           icon: "warn",
         },
         {
           title: "Willpower as plan A",
-          body: "Leaving tempting cues in plain sight and expecting discipline to win every time.",
+          body: "Leaving tempting cues in plain sight and expecting discipline to win every round.",
           icon: "warn",
         },
       ],

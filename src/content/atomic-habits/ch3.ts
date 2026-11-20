@@ -5,14 +5,14 @@ export const ch3: Omit<Chapter, "bankQuestions"> = {
   number: 3,
   title: "How to Build Better Habits in 4 Simple Steps",
   shortTitle: "Four Laws",
-  part: "The fundamentals",
+  part: "The fundamentals · Why tiny changes make a big difference",
   teaser:
-    "Cue, craving, response, reward — and the Four Laws that make habits stick or break.",
-  readMinutes: 11,
+    "Cue, craving, response, reward — the habit loop — and the Four Laws that build or break it.",
+  readMinutes: 12,
   summary: [
     {
       type: "bigIdea",
-      text: "Every habit follows a four-step loop: cue, craving, response, reward. To build good habits, make them obvious, attractive, easy, and satisfying. To break bad ones, invert the laws.",
+      text: "Every habit runs cue → craving → response → reward. To build good habits: make them obvious, attractive, easy, and satisfying. To break bad ones, invert each law.",
     },
     {
       type: "toc",
@@ -27,24 +27,24 @@ export const ch3: Omit<Chapter, "bankQuestions"> = {
     {
       type: "keyIdeas",
       id: "key",
-      title: "Key ideas",
+      title: "The habit loop",
       accent: "#3730A3",
       ideas: [
         {
           title: "Cue",
-          body: "A bit of information that predicts a reward — time, place, emotion, people, preceding action.",
+          body: "A bit of information that predicts a reward — time, location, emotion, people, or a preceding action.",
         },
         {
           title: "Craving",
-          body: "The motivational force. You do not crave the habit itself; you crave the change in state it delivers.",
+          body: "The motivational force. You don’t crave the habit itself; you crave the change in state it delivers.",
         },
         {
           title: "Response",
-          body: "The actual habit — a thought or action — which only happens if you are motivated and able enough.",
+          body: "The thought or action — which only happens if you are motivated and able enough.",
         },
         {
           title: "Reward",
-          body: "The end goal of every habit. Rewards satisfy and teach us which actions to repeat.",
+          body: "Satisfies the craving and teaches your brain which actions to remember next time.",
         },
       ],
     },
@@ -57,17 +57,17 @@ export const ch3: Omit<Chapter, "bankQuestions"> = {
       items: [
         {
           title: "1 · Make it obvious",
-          body: "Design clear cues. For bad habits: make them invisible.",
+          body: "Design clear cues. Bad habits: make them invisible.",
           icon: "focus",
         },
         {
           title: "2 · Make it attractive",
-          body: "Pair with want. For bad habits: make them unattractive.",
+          body: "Pair with want. Bad habits: make them unattractive.",
           icon: "meaning",
         },
         {
           title: "3 · Make it easy",
-          body: "Reduce friction. For bad habits: increase friction.",
+          body: "Reduce friction. Bad habits: increase friction.",
           icon: "action",
         },
       ],
@@ -75,7 +75,7 @@ export const ch3: Omit<Chapter, "bankQuestions"> = {
     {
       type: "insight",
       id: "insight",
-      text: "The fourth law completes the set: make it satisfying (or, for bad habits, make it unsatisfying). Behavior that is rewarded gets repeated.",
+      text: "The fourth law completes the set: make it satisfying — or, for bad habits, unsatisfying. Behavior that is rewarded gets repeated; behavior that is punished gets avoided.",
     },
     {
       type: "apply",
@@ -84,8 +84,8 @@ export const ch3: Omit<Chapter, "bankQuestions"> = {
       accent: "#166534",
       items: [
         "Map one good habit through cue → craving → response → reward.",
-        "Map one bad habit the same way — find the weakest link to break.",
-        "Pick which of the Four Laws you will redesign first this week.",
+        "Map one bad habit the same way — find the weakest link.",
+        "Choose which of the Four Laws you will redesign first this week.",
       ],
     },
     {
@@ -102,7 +102,7 @@ export const ch3: Omit<Chapter, "bankQuestions"> = {
         },
         {
           title: "Skipping the invert",
-          body: "Building good habits while leaving bad-habit cues fully armed in your environment.",
+          body: "Building good habits while leaving bad-habit cues fully armed.",
           icon: "warn",
         },
       ],

@@ -3,16 +3,16 @@ import type { Chapter } from "@/lib/types";
 export const ch8: Omit<Chapter, "bankQuestions"> = {
   id: "ch-8-goldilocks-and-mastery",
   number: 8,
-  title: "Stay in the Goldilocks Zone",
-  shortTitle: "Goldilocks Zone",
-  part: "Advanced tactics",
+  title: "The Goldilocks Rule",
+  shortTitle: "Goldilocks Rule",
+  part: "Advanced tactics · From good to great",
   teaser:
-    "Peak motivation lives at the edge of your ability — hard enough to grow, easy enough to continue.",
-  readMinutes: 10,
+    "Peak motivation lives at just-manageable difficulty — not too hard, not too easy, just right.",
+  readMinutes: 11,
   summary: [
     {
       type: "bigIdea",
-      text: "The Goldilocks Rule: humans experience peak motivation when working on challenges that are right on the edge of their current abilities — not too hard, not too easy. Combine that with deliberate practice and periodic reflection.",
+      text: "The Goldilocks Rule: humans experience peak motivation when working on tasks right on the edge of their current abilities — not too hard, not too easy, just right. Combine that with deliberate stretch and periodic review.",
     },
     {
       type: "toc",
@@ -32,19 +32,19 @@ export const ch8: Omit<Chapter, "bankQuestions"> = {
       ideas: [
         {
           title: "Just-manageable difficulty",
-          body: "Boredom kills habits as surely as failure. Nudge challenge up as competence rises.",
+          body: "Steve Martin expanded his act a minute or two at a time — enough victories to stay motivated, enough mistakes to keep working hard.",
         },
         {
-          title: "Variables of success",
-          body: "Genes and context matter, but habits determine how fully you play the hand you are dealt.",
+          title: "Genes load the gun; habits pull the trigger",
+          body: "Talent and context matter, but habits determine how fully you play the hand you are dealt. Work with your nature, not against it.",
+        },
+        {
+          title: "Establish, then advance",
+          body: "When starting, keep the habit easy (3rd Law). Once established, raise challenge so boredom doesn’t kill the streak.",
         },
         {
           title: "Reflection and review",
-          body: "Annual and monthly reviews keep your system honest — what to keep, improve, or drop.",
-        },
-        {
-          title: "Hold identity lightly",
-          body: "When a habit locks your identity too tightly, you stop adapting. Keep a growth margin.",
+          body: "Ask regularly: What went well? What didn’t? What will I try next? Systems need maintenance.",
         },
       ],
     },
@@ -57,17 +57,17 @@ export const ch8: Omit<Chapter, "bankQuestions"> = {
       items: [
         {
           title: "Raise the bar slowly",
-          body: "Once the two-minute version is automatic, add load without breaking the streak.",
+          body: "Once the two-minute version is automatic, add load without breaking consistency.",
           icon: "action",
         },
         {
           title: "Review the system",
-          body: "Ask: What went well? What didn’t? What will I try next?",
+          body: "Weekly or monthly: keep, improve, or drop.",
           icon: "focus",
         },
         {
           title: "Stay flexible",
-          body: "Keep the identity, update the methods when life changes.",
+          body: "Keep the identity; update the methods when life changes.",
           icon: "meaning",
         },
       ],
@@ -75,7 +75,7 @@ export const ch8: Omit<Chapter, "bankQuestions"> = {
     {
       type: "insight",
       id: "insight",
-      text: "The upside of habits is efficiency; the downside is that they can blind you to new paths. Establish habits, then refine them with curiosity.",
+      text: "Maximum motivation occurs at the midpoint between boredom and anxiety. Design your next step to live there.",
     },
     {
       type: "apply",
@@ -101,8 +101,8 @@ export const ch8: Omit<Chapter, "bankQuestions"> = {
           icon: "warn",
         },
         {
-          title: "Identity rigidity",
-          body: "Defending “this is who I am” when evidence says the approach needs a rewrite.",
+          title: "Jumping too hard",
+          body: "Raising difficulty so fast the habit collapses under anxiety.",
           icon: "warn",
         },
       ],

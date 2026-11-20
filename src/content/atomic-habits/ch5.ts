@@ -7,12 +7,12 @@ export const ch5: Omit<Chapter, "bankQuestions"> = {
   shortTitle: "Make It Attractive",
   part: "The 2nd Law",
   teaser:
-    "Temptation bundling and social norms pull habits forward — reframe the craving to want what helps you.",
-  readMinutes: 10,
+    "Temptation bundling, social norms, and reframing — make the habit something you want to begin.",
+  readMinutes: 11,
   summary: [
     {
       type: "bigIdea",
-      text: "The more attractive an opportunity is, the more likely it becomes habit-forming. Pair what you need to do with what you want to do — and join cultures where your desired behavior is normal.",
+      text: "The more attractive an opportunity is, the more likely it becomes habit-forming. Pair an action you need to do with one you want to do — and join cultures where your desired identity is already normal.",
     },
     {
       type: "toc",
@@ -32,19 +32,19 @@ export const ch5: Omit<Chapter, "bankQuestions"> = {
       ideas: [
         {
           title: "Dopamine drives wanting",
-          body: "Anticipation of reward fuels action. Design cues that make the good habit feel immediately appealing.",
+          body: "It is the anticipation of reward — not only the reward itself — that fuels action. Design cues that make the good habit feel immediately appealing.",
         },
         {
           title: "Temptation bundling",
-          body: "Only do [WANT] while doing [NEED]. Link a habit you should do with one you want to do.",
+          body: "Only do [WANT] while doing [NEED]. Link Netflix, a favorite podcast, or a latte to the habit you are building.",
         },
         {
-          title: "We imitate the close, the many, and the powerful",
-          body: "Family, peer norms, and status figures shape what feels attractive. Choose your tribe carefully.",
+          title: "We imitate the close, many, and powerful",
+          body: "Family, peer norms, and high-status figures shape what feels attractive. Choose your tribe with intention.",
         },
         {
-          title: "Reframe the mindset",
-          body: "Shift “I have to” into “I get to.” Highlight the benefit you are moving toward, not only the cost.",
+          title: "Reframe the craving",
+          body: "Shift “I have to” into “I get to.” Highlight the benefit you are moving toward — freedom, energy, pride — before you start.",
         },
       ],
     },
@@ -57,17 +57,17 @@ export const ch5: Omit<Chapter, "bankQuestions"> = {
       items: [
         {
           title: "Bundle",
-          body: "Attach a pleasure you already crave to the habit you are building.",
+          body: "Attach a pleasure you already crave to the habit you resist.",
           icon: "meaning",
         },
         {
           title: "Belong",
-          body: "Spend time where the identity you want is already normal.",
+          body: "Spend time where the identity you want is already the default.",
           icon: "focus",
         },
         {
           title: "Reframe",
-          body: "Name the freedom, energy, or pride the habit creates — before you start.",
+          body: "Name the change in state you want before the first rep.",
           icon: "action",
         },
       ],
@@ -75,7 +75,7 @@ export const ch5: Omit<Chapter, "bankQuestions"> = {
     {
       type: "insight",
       id: "insight",
-      text: "Habits are attractive when we associate them with positive feelings. Make the cue for the habit something you look forward to noticing.",
+      text: "Habits are attractive when we associate them with positive feelings. To break a bad habit, highlight the costs; to build a good one, highlight the benefits you will enjoy now.",
     },
     {
       type: "apply",
@@ -84,7 +84,7 @@ export const ch5: Omit<Chapter, "bankQuestions"> = {
       accent: "#166534",
       items: [
         "Design one temptation bundle for a habit you resist.",
-        "Identify one person or group that normalizes the identity you want — schedule contact.",
+        "Identify one person or group that normalizes your desired identity — schedule contact.",
         "Rewrite one “I have to” habit as an “I get to” sentence.",
       ],
     },

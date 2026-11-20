@@ -3,16 +3,16 @@ import type { Chapter } from "@/lib/types";
 export const ch2: Omit<Chapter, "bankQuestions"> = {
   id: "ch-2-identity-habits",
   number: 2,
-  title: "Identity-Based Habits",
+  title: "How Your Habits Shape Your Identity",
   shortTitle: "Identity Habits",
-  part: "The fundamentals",
+  part: "The fundamentals · Why tiny changes make a big difference",
   teaser:
-    "The most effective way to change your habits is to focus on who you wish to become — not only what you want to achieve.",
-  readMinutes: 10,
+    "Every action is a vote for the person you wish to become — change what you do to change who you are.",
+  readMinutes: 11,
   summary: [
     {
       type: "bigIdea",
-      text: "There are three layers of behavior change: outcomes, processes, and identity. Lasting change is identity change — every action is a vote for the type of person you wish to become.",
+      text: "Every action you take is a vote for the type of person you wish to become. No single instance transforms your beliefs — but as the votes build up, so does the evidence of your new identity.",
     },
     {
       type: "toc",
@@ -31,38 +31,38 @@ export const ch2: Omit<Chapter, "bankQuestions"> = {
       accent: "#3730A3",
       ideas: [
         {
-          title: "Start with identity",
-          body: "Instead of “I want to run a marathon,” begin with “I am a runner.” Habits are how you embody that identity.",
+          title: "Start with who, not what",
+          body: "Outcome goals ask what you want. Identity asks who you wish to become — “I am a runner” before “I want to run a marathon.”",
         },
         {
           title: "Votes, not proofs",
-          body: "You do not need a perfect streak. You need enough evidence that the new identity is true.",
-        },
-        {
-          title: "Belief follows behavior",
-          body: "Act like the person you want to be in small ways, and your self-image updates to match.",
+          body: "Each page makes you a writer. Each workout makes you an athlete. Meaningful change does not require radical change — small habits provide evidence.",
         },
         {
           title: "Two-step process",
-          body: "Decide the type of person you want to be. Prove it to yourself with small wins.",
+          body: "Decide the type of person you want to be. Prove it to yourself with small wins until the story you tell yourself updates.",
+        },
+        {
+          title: "Trust compounds too",
+          body: "Habits don’t only get results — they teach you to trust yourself. That belief is what keeps the next vote coming.",
         },
       ],
     },
     {
       type: "cards",
       id: "layers",
-      title: "Three layers of change",
+      title: "Three layers of behavior change",
       accent: "#155E75",
       tone: "teal",
       items: [
         {
           title: "Outcomes",
-          body: "What you get — weight, money, grades, titles.",
+          body: "What you get — weight, money, titles.",
           icon: "focus",
         },
         {
           title: "Processes",
-          body: "What you do — routines, systems, habits.",
+          body: "What you do — routines and systems.",
           icon: "action",
         },
         {
@@ -75,7 +75,7 @@ export const ch2: Omit<Chapter, "bankQuestions"> = {
     {
       type: "insight",
       id: "insight",
-      text: "The ultimate form of intrinsic motivation is when a habit becomes part of your identity. True behavior change is identity change.",
+      text: "The most practical way to change who you are is to change what you do. True behavior change is identity change.",
     },
     {
       type: "apply",
@@ -85,7 +85,7 @@ export const ch2: Omit<Chapter, "bankQuestions"> = {
       items: [
         "Complete: “I want to become the type of person who…”",
         "List three tiny votes that would prove that identity this week.",
-        "Catch one identity statement that blocks you (“I’m not a morning person”) and rewrite it as a becoming statement.",
+        "Rewrite one limiting identity (“I’m not a morning person”) as a becoming statement.",
       ],
     },
     {
@@ -97,7 +97,7 @@ export const ch2: Omit<Chapter, "bankQuestions"> = {
       items: [
         {
           title: "Outcome-only goals",
-          body: "Chasing a result while keeping an identity that fights the habits required.",
+          body: "Chasing a result while keeping an identity that fights the required habits.",
           icon: "warn",
         },
         {

@@ -7,12 +7,12 @@ export const ch7: Omit<Chapter, "bankQuestions"> = {
   shortTitle: "Make It Satisfying",
   part: "The 4th Law",
   teaser:
-    "What is rewarded is repeated. Add immediate satisfaction — and never miss twice.",
-  readMinutes: 10,
+    "The cardinal rule: what is immediately rewarded is repeated. Track it — and never miss twice.",
+  readMinutes: 11,
   summary: [
     {
       type: "bigIdea",
-      text: "We are more likely to repeat a behavior when the experience is satisfying. Because the brain prioritizes immediate rewards, give good habits a little pleasure now — and make bad habits feel costly now.",
+      text: "The first mistake is never the one that ruins you — it is the spiral of repeated mistakes that follows. Missing once is an accident. Missing twice is the start of a new habit. Reclaim fast.",
     },
     {
       type: "toc",
@@ -32,19 +32,19 @@ export const ch7: Omit<Chapter, "bankQuestions"> = {
       ideas: [
         {
           title: "Cardinal rule of behavior change",
-          body: "What is immediately rewarded is repeated. What is immediately punished is avoided.",
+          body: "What is immediately rewarded is repeated. What is immediately punished is avoided. Add a little pleasure now to habits whose payoff is delayed.",
         },
         {
           title: "Habit tracking",
-          body: "Measuring progress is often satisfying by itself. Don’t break the chain — and if you do, get back on track quickly.",
+          body: "Measuring progress is satisfying by itself. Make completion visible — calendar, jar, app — so the streak reinforces the loop.",
         },
         {
           title: "Never miss twice",
-          body: "Missing once is an accident. Missing twice is the start of a new habit. Recover on the next opportunity.",
+          body: "Anyone can have a bad day. Winners rebound on the next opportunity. Breaking a habit matters less when reclaiming it is fast.",
         },
         {
-          title: "Accountability",
-          body: "A habit contract or accountability partner makes the costs of skipping social and immediate.",
+          title: "Accountability partner",
+          body: "A habit contract or partner makes the cost of skipping social and immediate — raising the odds you follow through.",
         },
       ],
     },
@@ -57,17 +57,17 @@ export const ch7: Omit<Chapter, "bankQuestions"> = {
       items: [
         {
           title: "Immediate reward",
-          body: "Pair the habit with a small celebration, checkmark, or treat that doesn’t undo the habit.",
+          body: "Checkmark, note, or small treat that doesn’t undo the habit.",
           icon: "meaning",
         },
         {
           title: "Visible progress",
-          body: "Trackers, jars, calendars — make completion something you can see.",
+          body: "Don’t break the chain — and if you do, start the next one immediately.",
           icon: "focus",
         },
         {
           title: "Social cost",
-          body: "Tell someone who will notice. Habit contracts raise the price of inaction.",
+          body: "Tell someone who will notice. Make inaction expensive.",
           icon: "action",
         },
       ],
@@ -75,7 +75,7 @@ export const ch7: Omit<Chapter, "bankQuestions"> = {
     {
       type: "insight",
       id: "insight",
-      text: "The first rule of compounding is never interrupt it unnecessarily. Missing a day hurts less than deciding the streak is over.",
+      text: "The problem is not slipping up; the problem is thinking that if you can’t do something perfectly, then you shouldn’t do it at all.",
     },
     {
       type: "apply",
@@ -83,8 +83,8 @@ export const ch7: Omit<Chapter, "bankQuestions"> = {
       title: "Apply it",
       accent: "#166534",
       items: [
-        "Add one immediate reward to your key habit (checkmark, note, short pleasure).",
-        "Start a simple tracker for seven days — paper is fine.",
+        "Add one immediate reward to your key habit.",
+        "Start a simple seven-day tracker — paper is fine.",
         "Write your “never miss twice” recovery plan before you need it.",
       ],
     },
@@ -97,11 +97,11 @@ export const ch7: Omit<Chapter, "bankQuestions"> = {
       items: [
         {
           title: "Delayed-only rewards",
-          body: "Relying only on distant outcomes (fitness in six months) with no near-term satisfaction.",
+          body: "Relying only on distant outcomes with no near-term satisfaction.",
           icon: "warn",
         },
         {
-          title: "Streak perfectionism",
+          title: "All-or-nothing streaks",
           body: "Quitting entirely after one miss instead of protecting the long-term compound.",
           icon: "warn",
         },

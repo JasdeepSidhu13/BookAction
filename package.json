@@ -6,7 +6,8 @@
     "dev": "env -u DATABASE_URL next dev --turbopack",
     "build": "next build && node scripts/migrate.mjs",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test:generate": "npx tsx scripts/smoke-generate.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.17",

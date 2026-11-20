@@ -1,4 +1,5 @@
 import { LIMITS } from "@/lib/limits";
+import { cleanPdfText } from "@/lib/pdfClean";
 
 export async function extractTextFromUpload(
   file: File,
@@ -15,7 +16,7 @@ export async function extractTextFromUpload(
     type.startsWith("text/")
   ) {
     const text = await file.text();
-    return { text: clampSource(text), kind: "text" };
+    return { text: clampSource(text, false), kind: "text" };
   }
 
   const looksPdf =
@@ -33,14 +34,15 @@ export async function extractTextFromUpload(
     const parsed = await pdfParse(buffer);
     const text = (parsed.text || "").trim();
     if (!text) throw new Error("empty_text");
-    return { text: clampSource(text), kind: "pdf" };
+    return { text: clampSource(text, true), kind: "pdf" };
   }
 
   throw new Error("unsupported_type");
 }
 
-function clampSource(text: string): string {
-  const cleaned = text.replace(/\r/g, "").replace(/\u0000/g, "").trim();
+function clampSource(text: string, fromPdf: boolean): string {
+  const cleaned = (fromPdf ? cleanPdfText(text) : text.replace(/\r/g, "").replace(/\u0000/g, ""))
+    .trim();
   if (!cleaned) throw new Error("empty_text");
   if (cleaned.length > LIMITS.uploadChars) {
     return cleaned.slice(0, LIMITS.uploadChars);

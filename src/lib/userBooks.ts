@@ -124,9 +124,39 @@ export async function getUserBookMeta(ownerSub: string, bookId: string) {
   return rows[0];
 }
 
-export async function deleteUserBook(ownerSub: string, bookId: string) {
+/**
+ * Delete an uploaded book and all progress tied to it for this owner.
+ * Catalog starter books are not stored in user_books — those cannot be deleted here.
+ * user_chapters cascade from user_books; answers cascade from check_ins.
+ */
+export async function deleteUserBook(ownerSub: string, bookId: string): Promise<boolean> {
+  const existing = await getUserBookMeta(ownerSub, bookId);
+  if (!existing) return false;
+
+  // Related rows are keyed by (owner_sub, book_id) without FKs to user_books.
+  await sql(
+    `delete from question_bank_answers where owner_sub = $1 and book_id = $2`,
+    [ownerSub, bookId],
+  );
+  await sql(
+    `delete from custom_questions where owner_sub = $1 and book_id = $2`,
+    [ownerSub, bookId],
+  );
+  await sql(
+    `delete from commitments where owner_sub = $1 and book_id = $2`,
+    [ownerSub, bookId],
+  );
+  await sql(
+    `delete from chapter_settings where owner_sub = $1 and book_id = $2`,
+    [ownerSub, bookId],
+  );
+  await sql(
+    `delete from check_ins where owner_sub = $1 and book_id = $2`,
+    [ownerSub, bookId],
+  );
   await sql(`delete from user_books where owner_sub = $1 and id = $2`, [
     ownerSub,
     bookId,
   ]);
+  return true;
 }

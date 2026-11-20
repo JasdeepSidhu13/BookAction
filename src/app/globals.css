@@ -19,6 +19,14 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+/* Big idea: soft editorial reading face — easier on the eye than bold display. */
+.big-idea-text {
+  font-optical-sizing: auto;
+  font-feature-settings: "kern" 1, "liga" 1, "onum" 1;
+  text-wrap: pretty;
+  hyphens: auto;
+}
+
 a {
   color: #3730a3;
 }

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Plus_Jakarta_Sans } from "next/font/google";
+import { Inter, Literata, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 
 const inter = Inter({
@@ -15,6 +15,15 @@ const jakarta = Plus_Jakarta_Sans({
   display: "swap",
 });
 
+/** Soft editorial face for long “Big idea” reading passages. */
+const literata = Literata({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  style: ["normal", "italic"],
+  variable: "--font-literata",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: "Chapterwise",
   description:
@@ -24,7 +33,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} ${jakarta.variable} min-h-screen bg-canvas antialiased`}>
+      <body
+        className={`${inter.variable} ${jakarta.variable} ${literata.variable} min-h-screen bg-canvas antialiased`}
+      >
         {children}
       </body>
     </html>

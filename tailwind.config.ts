@@ -57,6 +57,13 @@ export default {
       fontFamily: {
         sans: ["var(--font-inter)", "system-ui", "sans-serif"],
         display: ["var(--font-jakarta)", "system-ui", "sans-serif"],
+        reading: [
+          "var(--font-literata)",
+          "Palatino Linotype",
+          "Palatino",
+          "Georgia",
+          "serif",
+        ],
       },
       boxShadow: {
         cover: "0 12px 24px -12px rgba(30,27,75,0.45)",

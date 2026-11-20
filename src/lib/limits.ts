@@ -12,7 +12,13 @@ export const LIMITS = {
   uploadBytes: 12 * 1024 * 1024,
   uploadChars: 800_000,
   maxChapters: 40,
+  /** Cap AI chapter calls so uploads finish before the host gateway times out. */
+  maxLlmChapters: 8,
   chapterSourceChars: 12_000,
+  llmChapterSourceChars: 5_000,
+  llmConcurrency: 3,
+  llmPerCallMs: 22_000,
+  llmOverallMs: 70_000,
   uploadsPerHour: 10,
 } as const;
 

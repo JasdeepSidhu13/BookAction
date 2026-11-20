@@ -44,10 +44,19 @@ export async function generateBookFromText(input: {
   const apiKey = preferLlm ? resolveOpenAiKey(input.openAiApiKey) : "";
   if (apiKey) {
     try {
-      const chapters = await generateChaptersWithLlm(raw, apiKey);
-      return { ...meta, chapters, mode: "llm" };
+      // AI only the first N chapters (time budget); fill the rest locally.
+      const llmChapters = await generateChaptersWithLlm(raw, apiKey);
+      const rest = raw
+        .slice(llmChapters.length)
+        .map((ch, idx) => heuristicChapter(ch, llmChapters.length + idx));
+      return {
+        ...meta,
+        chapters: [...llmChapters, ...rest],
+        mode: "llm",
+      };
     } catch {
-      // Fall through so a bad key / quota still yields a usable library entry.
+      // Timeout, bad key, or quota: finish with local extract instead of
+      // hanging until the host returns a non-JSON error page.
     }
   }
 

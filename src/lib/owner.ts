@@ -1,6 +1,6 @@
 /**
- * Who gets the built-in starter library (Awaken + Confidence Gap).
- * Everyone else starts with an empty library and only their uploads.
+ * Who gets the built-in starter library (Awaken, Confidence Gap,
+ * Man’s Search for Meaning). Everyone else starts empty and only sees uploads.
  *
  * Set CHAPTERWISE_OWNER_EMAIL and/or CHAPTERWISE_OWNER_USER_ID as app secrets
  * (no hardcoded personal identifiers in source).

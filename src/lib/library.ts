@@ -6,7 +6,7 @@ import { getUserBook, listUserBooks } from "@/lib/userBooks";
 /** Access context for the current viewer's personal library. */
 export type LibraryAccess = {
   sub: string;
-  /** True only for the app owner — includes Awaken + Confidence Gap starter books. */
+  /** True only for the app owner — includes curated starter books. */
   includeStarterBooks: boolean;
 };
 

@@ -111,9 +111,10 @@ export function UploadBookClient({ viewerName, simulated, verified }: Props) {
           Upload a PDF
         </h1>
         <p className="m-0 text-[15px] leading-[1.6] text-soft">
-          Upload any book PDF. Chapterwise detects chapters, drafts a big idea / key ideas / apply
-          steps, and builds Action + Question Bank prompts from the text — locally, with no API.
-          Cleaner text PDFs work best. Saved privately for {viewerName}.
+          Upload any book PDF. Chapterwise detects chapters (or splits the book into 5–7 sections
+          when markers are missing), drafts summaries from the text, and builds Action + Question
+          Bank prompts — locally, with no API. Text-based PDFs work best. Saved privately for{" "}
+          {viewerName}.
         </p>
       </div>
 
